@@ -475,12 +475,21 @@ class ReconX:
         """Perform API reconnaissance"""
         self.print_info("Starting API reconnaissance...")
         
-        # Kiterunner (fix the command syntax)
+        # Kiterunner (requires pre-compiled kite files)
         if self.check_tool_installed('kr'):
-            apis_wordlist = "wordlists/apis.txt"
+            # Try with basic brute force mode since wordlist format is causing issues
             api_output = f"{self.scan_dir}/api/kiterunner_{self.domain}.txt"
-            # Fixed syntax for kiterunner
-            self.run_command(f"kr scan https://{self.domain} -w {apis_wordlist} > {api_output}")
+            
+            # Try to use routes compilation or skip if wordlist format is wrong
+            success = self.run_command(f"kr brute https://{self.domain} > {api_output}")
+            if not success:
+                self.print_warning("KiteRunner failed with wordlist format, trying alternative approach...")
+                # Alternative: Use directory brute force for API endpoints
+                ffuf_output = f"{self.scan_dir}/api/ffuf_api_{self.domain}.txt"
+                if self.check_tool_installed('ffuf'):
+                    self.run_command(f"ffuf -u https://{self.domain}/FUZZ -w wordlists/apis.txt -mc 200,301,302,403 -o {ffuf_output}")
+                else:
+                    self.print_warning("KiteRunner and ffuf not available, skipping API endpoint discovery")
         
         # GAU
         if self.check_tool_installed('gau'):
