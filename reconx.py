@@ -611,13 +611,14 @@ class ReconX:
             whatweb_json = f"{self.scan_dir}/cms/whatweb_{self.domain}.json"
             
             # Run WhatWeb with different verbosity levels
-            self.run_command(f"whatweb -v -a 3 --color=never {self.domain} > {whatweb_output}")
-            self.run_command(f"whatweb --log-json {whatweb_json} -a 3 {self.domain}")
+            success1 = self.run_command(f"whatweb -v -a 3 --color=never {self.domain} > {whatweb_output}")
+            success2 = self.run_command(f"whatweb --log-json {whatweb_json} -a 3 {self.domain}")
+            
+            if not success1 and not success2:
+                self.print_warning("WhatWeb failed to execute properly, skipping...")
         else:
-            self.print_warning("WhatWeb not installed, attempting to install...")
-            # Try to install WhatWeb
-            if self.run_command("sudo apt install -y whatweb"):
-                self.run_whatweb()
+            self.print_warning("WhatWeb not installed, skipping WhatWeb scan...")
+            self.print_info("Using manual detection methods instead...")
     
     def run_wappalyzer(self):
         """Run alternative technology detection (Wappalyzer is deprecated)"""
