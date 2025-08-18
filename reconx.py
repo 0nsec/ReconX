@@ -236,7 +236,25 @@ class ReconX:
         """Perform directory bruteforcing"""
         self.print_info("Starting directory bruteforcing...")
         
-        wordlist = "/usr/share/wordlists/dirb/common.txt"  # Default wordlist
+        # Check for wordlist locations in order of preference
+        wordlist_paths = [
+            "/usr/share/dirb/wordlists/common.txt",
+            "/usr/share/wordlists/dirb/common.txt", 
+            "wordlists/common.txt"
+        ]
+        
+        wordlist = None
+        for path in wordlist_paths:
+            if os.path.exists(path):
+                wordlist = path
+                break
+                
+        if not wordlist:
+            self.print_warning("No wordlist found, creating basic wordlist...")
+            wordlist = "wordlists/common.txt"
+            os.makedirs("wordlists", exist_ok=True)
+            with open(wordlist, 'w') as f:
+                f.write("admin\nadministrator\napi\nbackup\nconfig\ndashboard\ndebug\ndev\ndocs\ndownload\nfiles\nindex\nlogin\nmanager\ntest\nupload\nwp-admin\nwp-content\n")
         
         # FFUF
         if self.check_tool_installed('ffuf'):
