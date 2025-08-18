@@ -126,6 +126,40 @@ class ReconX:
             self.print_error(f"Error running command: {e}")
             return False
     
+    def run_interactive_command(self, command, input_responses=None):
+        """Run interactive command with predefined responses"""
+        try:
+            self.print_info(f"Running interactive: {command}")
+            
+            if input_responses:
+                # Prepare input string
+                input_str = "\n".join(input_responses) + "\n"
+                
+                process = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                stdout, stderr = process.communicate(input=input_str)
+                
+                if process.returncode == 0:
+                    self.print_success("Interactive command completed successfully")
+                    return stdout, stderr
+                else:
+                    self.print_error(f"Interactive command failed: {stderr}")
+                    return stdout, stderr
+            else:
+                result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                return result.stdout, result.stderr
+                
+        except Exception as e:
+            self.print_error(f"Error running interactive command: {e}")
+            return "", str(e)
+    
     def check_tool_installed(self, tool):
         """Check if a tool is installed"""
         return subprocess.run(f"which {tool}", shell=True, capture_output=True).returncode == 0
@@ -381,10 +415,106 @@ class ReconX:
         self.print_info("Starting CMS enumeration...")
         
         if os.path.exists("tools/CMSeeK/cmseek.py"):
+            # Create CMSeeK Result directory if it doesn't exist
+            cmseek_result_dir = f"tools/CMSeeK/Result"
+            Path(cmseek_result_dir).mkdir(parents=True, exist_ok=True)
+            
             cms_output = f"{self.scan_dir}/cms/cmseek_{self.domain}.txt"
-            self.run_command(f"python3 tools/CMSeeK/cmseek.py -u {self.domain} > {cms_output}")
+            cms_json_output = f"{self.scan_dir}/cms/cmseek_{self.domain}.json"
+            
+            # Run CMSeeK with automatic 'yes' response for redirects
+            command = f"python3 tools/CMSeeK/cmseek.py -u {self.domain}"
+            
+            # Use interactive command with 'y' response for redirect confirmation
+            stdout, stderr = self.run_interactive_command(command, input_responses=['y'])
+            
+            # Save the text output
+            with open(cms_output, 'w') as f:
+                f.write(stdout)
+                if stderr:
+                    f.write(f"\n\n--- STDERR ---\n{stderr}")
+            
+            # Try to find and copy the JSON result if it exists
+            potential_json_paths = [
+                f"tools/CMSeeK/Result/{self.domain}/cms.json",
+                f"tools/CMSeeK/Result/{self.domain.replace('https://', '').replace('http://', '')}/cms.json",
+                f"tools/CMSeeK/Result/{self.target}/cms.json"
+            ]
+            
+            json_found = False
+            for json_path in potential_json_paths:
+                if os.path.exists(json_path):
+                    self.print_info(f"Found CMSeeK JSON result: {json_path}")
+                    # Copy the JSON file to our scan directory
+                    import shutil
+                    shutil.copy2(json_path, cms_json_output)
+                    json_found = True
+                    break
+            
+            if not json_found:
+                # Parse the text output and create JSON manually
+                self.print_info("Creating JSON from CMSeeK text output...")
+                cms_data = self.parse_cmseek_output(stdout)
+                if cms_data:
+                    with open(cms_json_output, 'w') as f:
+                        json.dump(cms_data, f, indent=2)
+                    self.print_success(f"CMSeeK results saved to {cms_json_output}")
+            else:
+                self.print_success(f"CMSeeK JSON results copied to {cms_json_output}")
         
         self.print_success("CMS enumeration completed")
+    
+    def parse_cmseek_output(self, output):
+        """Parse CMSeeK text output and extract CMS information"""
+        cms_data = {
+            "target": self.target,
+            "domain": self.domain,
+            "cms_detected": False,
+            "cms_name": None,
+            "cms_version": None,
+            "detection_method": None,
+            "scan_time": None,
+            "requests_made": None
+        }
+        
+        try:
+            lines = output.split('\n')
+            for line in lines:
+                # Extract CMS detection info
+                if "CMS Detected, CMS ID:" in line:
+                    cms_data["cms_detected"] = True
+                    # Extract CMS ID
+                    if "CMS ID:" in line and "Detection method:" in line:
+                        parts = line.split("CMS ID:")
+                        if len(parts) > 1:
+                            cms_part = parts[1].split(",")[0].strip()
+                            cms_data["cms_name"] = cms_part
+                        
+                        # Extract detection method
+                        if "Detection method:" in line:
+                            method_parts = line.split("Detection method:")
+                            if len(method_parts) > 1:
+                                cms_data["detection_method"] = method_parts[1].strip()
+                
+                # Extract CMS name from results section
+                elif "CMS:" in line and "Moodle" in line:
+                    cms_data["cms_name"] = "Moodle"
+                
+                # Extract scan time
+                elif "Scan Completed in" in line:
+                    import re
+                    time_match = re.search(r'(\d+\.?\d*)\s*Seconds', line)
+                    requests_match = re.search(r'using\s+(\d+)\s+Requests', line)
+                    if time_match:
+                        cms_data["scan_time"] = float(time_match.group(1))
+                    if requests_match:
+                        cms_data["requests_made"] = int(requests_match.group(1))
+            
+            return cms_data
+            
+        except Exception as e:
+            self.print_error(f"Error parsing CMSeeK output: {e}")
+            return cms_data
     
     def waf_detection(self):
         """Detect WAF"""
