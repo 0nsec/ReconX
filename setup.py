@@ -273,6 +273,84 @@ class ReconXSetup:
         self.print_info("Setting up gf patterns...")
         self.run_command("git clone https://github.com/1ndianl33t/Gf-Patterns ~/.gf")
         self.print_success("Gf patterns installed")
+
+    def install_advanced_security_tools(self):
+        """Install advanced security testing tools"""
+        self.print_info("Installing advanced security tools...")
+        
+        # SSLyze for SSL/TLS analysis
+        self.print_info("Installing SSLyze...")
+        self.run_command("pip3 install sslyze")
+        
+        # testssl.sh for comprehensive SSL testing
+        self.print_info("Installing testssl.sh...")
+        if self.run_command("git clone --depth 1 https://github.com/drwetter/testssl.sh.git /opt/testssl.sh"):
+            self.run_command("chmod +x /opt/testssl.sh/testssl.sh")
+            self.print_success("testssl.sh installed")
+        
+        # subjack for subdomain takeover
+        self.print_info("Installing subjack...")
+        self.run_command("go install github.com/haccer/subjack@latest")
+        
+        # cors-scanner
+        self.print_info("Installing cors-scanner...")
+        if self.run_command(f"git clone https://github.com/chenjj/CORScanner.git {self.tools_dir}/CORScanner"):
+            self.run_command(f"pip3 install -r {self.tools_dir}/CORScanner/requirements.txt")
+            self.print_success("CORScanner installed")
+
+    def install_cloud_tools(self):
+        """Install cloud security tools"""
+        self.print_info("Installing cloud security tools...")
+        
+        # AWS CLI
+        self.print_info("Installing AWS CLI...")
+        self.run_command("curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o awscliv2.zip")
+        self.run_command("unzip -q awscliv2.zip && sudo ./aws/install && rm -rf aws awscliv2.zip")
+        
+        # S3Scanner for S3 bucket enumeration
+        self.print_info("Installing S3Scanner...")
+        if self.run_command(f"git clone https://github.com/sa7mon/S3Scanner.git {self.tools_dir}/S3Scanner"):
+            self.run_command(f"pip3 install -r {self.tools_dir}/S3Scanner/requirements.txt")
+            self.print_success("S3Scanner installed")
+
+    def install_osint_tools(self):
+        """Install OSINT tools"""
+        self.print_info("Installing OSINT tools...")
+        
+        # theHarvester for email/subdomain gathering
+        self.print_info("Installing theHarvester...")
+        if self.run_command(f"git clone https://github.com/laramies/theHarvester.git {self.tools_dir}/theHarvester"):
+            self.run_command(f"pip3 install -r {self.tools_dir}/theHarvester/requirements.txt")
+            self.print_success("theHarvester installed")
+        
+        # GitDorker for GitHub OSINT
+        self.print_info("Installing GitDorker...")
+        if self.run_command(f"git clone https://github.com/obheda12/GitDorker.git {self.tools_dir}/GitDorker"):
+            self.run_command(f"pip3 install -r {self.tools_dir}/GitDorker/requirements.txt")
+            self.print_success("GitDorker installed")
+
+    def create_comprehensive_wordlists(self):
+        """Create comprehensive wordlists for various attack types"""
+        self.print_info("Creating comprehensive wordlists...")
+        
+        # CSRF tokens wordlist
+        csrf_tokens = ["_token", "authenticity_token", "csrf_token", "csrfToken", "csrf", "token", "_csrf"]
+        with open(f"{self.wordlists_dir}/csrf_tokens.txt", 'w') as f:
+            f.write('\n'.join(csrf_tokens))
+        
+        # XXE payloads
+        xxe_payloads = [
+            '<?xml version="1.0"?><!DOCTYPE test [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><test>&xxe;</test>'
+        ]
+        with open(f"{self.wordlists_dir}/xxe_payloads.txt", 'w') as f:
+            f.write('\n'.join(xxe_payloads))
+        
+        # SSTI payloads
+        ssti_payloads = ['{{7*7}}', '${7*7}', '{7*7}', '<%=7*7%>']
+        with open(f"{self.wordlists_dir}/ssti_payloads.txt", 'w') as f:
+            f.write('\n'.join(ssti_payloads))
+        
+        self.print_success("Comprehensive wordlists created")
     
     def create_requirements_file(self):
         """Create requirements.txt file"""
@@ -348,10 +426,14 @@ Some tools may require manual installation:
             self.install_python_tools()
             self.install_go_tools()
             self.install_special_tools()
+            self.install_advanced_security_tools()
+            self.install_cloud_tools()
+            self.install_osint_tools()
             self.create_wordlists()
+            self.create_comprehensive_wordlists()
             self.setup_gf_patterns()
             
-            self.print_success("ReconX setup completed successfully!")
+            self.print_success("ReconX comprehensive setup completed successfully!")
             self.print_installation_guide()
             
         except KeyboardInterrupt:
