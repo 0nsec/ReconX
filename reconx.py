@@ -913,17 +913,14 @@ class ReconX:
         
         Path(f"{self.scan_dir}/cms/drupal").mkdir(parents=True, exist_ok=True)
         
-        # Droopescan
-        if self.check_tool_installed('droopescan'):
-            drupal_output = f"{self.scan_dir}/cms/drupal/droopescan_{self.domain}.txt"
-            self.run_command(f"droopescan scan drupal -u https://{self.domain} > {drupal_output}")
-        else:
-            self.print_info("Installing Droopescan...")
-            if self.run_command("pip3 install droopescan"):
-                self.run_drupal_scans()
+        # Skip Droopescan due to Python 3.12 compatibility issues
+        self.print_warning("Droopescan skipped due to Python 3.12 compatibility issues")
+        self.print_info("Using manual Drupal detection methods instead...")
         
-        # Manual Drupal detection
+        # Enhanced manual Drupal detection
         self.drupal_manual_detection()
+        self.drupal_version_detection()
+        self.drupal_vulnerability_check()
     
     def wordpress_manual_detection(self):
         """Manual WordPress detection methods"""
@@ -1027,6 +1024,98 @@ class ReconX:
             f.write("Drupal Manual Detection Results\n")
             f.write("=" * 40 + "\n")
             f.write("\n".join(results))
+    
+    def drupal_version_detection(self):
+        """Detect Drupal version"""
+        self.print_info("Detecting Drupal version...")
+        
+        version_file = f"{self.scan_dir}/cms/drupal/version_detection.txt"
+        version_info = []
+        
+        try:
+            # Check CHANGELOG.txt for version info
+            changelog_url = f"https://{self.domain}/CHANGELOG.txt"
+            response = requests.get(changelog_url, timeout=10, verify=False)
+            if response.status_code == 200:
+                lines = response.text.split('\n')[:10]  # First 10 lines usually contain version
+                for line in lines:
+                    if 'drupal' in line.lower() or any(char.isdigit() for char in line):
+                        version_info.append(f"CHANGELOG: {line.strip()}")
+            
+            # Check generator meta tag
+            main_response = requests.get(f"https://{self.domain}", timeout=10, verify=False)
+            if 'generator' in main_response.text.lower() and 'drupal' in main_response.text.lower():
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(main_response.text, 'html.parser')
+                generator = soup.find('meta', attrs={'name': 'generator'})
+                if generator and generator.get('content'):
+                    version_info.append(f"Generator: {generator.get('content')}")
+            
+            # Check for Drupal-specific JavaScript files
+            js_patterns = [
+                '/misc/drupal.js',
+                '/core/misc/drupal.js',
+                '/sites/all/themes/'
+            ]
+            
+            for pattern in js_patterns:
+                js_url = f"https://{self.domain}{pattern}"
+                try:
+                    js_response = requests.head(js_url, timeout=5, verify=False)
+                    if js_response.status_code == 200:
+                        version_info.append(f"JS File found: {pattern}")
+                except:
+                    continue
+            
+        except Exception as e:
+            version_info.append(f"Error in version detection: {e}")
+        
+        with open(version_file, 'w') as f:
+            f.write("Drupal Version Detection Results\n")
+            f.write("=" * 40 + "\n")
+            f.write("\n".join(version_info))
+    
+    def drupal_vulnerability_check(self):
+        """Check for common Drupal vulnerabilities"""
+        self.print_info("Checking for common Drupal vulnerabilities...")
+        
+        vuln_file = f"{self.scan_dir}/cms/drupal/vulnerability_check.txt"
+        vuln_results = []
+        
+        # Common Drupal vulnerability paths
+        vuln_paths = [
+            '/xmlrpc.php',
+            '/install.php',
+            '/update.php',
+            '/cron.php',
+            '/authorize.php',
+            '/sites/default/settings.php',
+            '/sites/default/files/',
+            '/.htaccess',
+            '/robots.txt'
+        ]
+        
+        for path in vuln_paths:
+            try:
+                vuln_url = f"https://{self.domain}{path}"
+                response = requests.get(vuln_url, timeout=10, verify=False)
+                vuln_results.append(f"{path} - Status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    if path == '/install.php' and 'install drupal' in response.text.lower():
+                        vuln_results.append(f"  ⚠️  VULNERABILITY: Installation page accessible!")
+                    elif path == '/update.php' and 'update' in response.text.lower():
+                        vuln_results.append(f"  ⚠️  VULNERABILITY: Update page accessible!")
+                    elif path == '/sites/default/settings.php':
+                        vuln_results.append(f"  ⚠️  VULNERABILITY: Settings file accessible!")
+                        
+            except:
+                vuln_results.append(f"{path} - Connection failed")
+        
+        with open(vuln_file, 'w') as f:
+            f.write("Drupal Vulnerability Check Results\n")
+            f.write("=" * 40 + "\n")
+            f.write("\n".join(vuln_results))
     
     def run_custom_cms_fingerprinting(self):
         """Run custom CMS fingerprinting techniques"""

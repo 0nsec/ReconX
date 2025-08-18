@@ -174,12 +174,10 @@ class ReconXSetup:
         else:
             self.print_success("WPScan already installed")
         
-        # Droopescan for Drupal
-        self.print_info("Installing Droopescan...")
-        if self.run_command("pip3 install droopescan"):
-            self.print_success("Droopescan installed")
-        else:
-            self.print_warning("Droopescan installation failed")
+        # Droopescan for Drupal (Skip due to Python 3.12 compatibility)
+        self.print_info("Skipping Droopescan due to Python 3.12 compatibility issues...")
+        self.print_info("ReconX includes enhanced manual Drupal detection instead")
+        self.print_warning("Droopescan uses deprecated 'imp' module not available in Python 3.12")
     
     def install_go_tools(self):
         """Install Go-based tools"""
