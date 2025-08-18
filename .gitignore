@@ -1,0 +1,10 @@
+verify_installation.py
+scanning/lms.iqra.edu.pk_20250818_213409/headers/nikto_lms.iqra.edu.pk.txt
+scanning/lms.iqra.edu.pk_20250818_213409/javascript/linkfinder
+scanning/lms.iqra.edu.pk_20250818_213409/ports/nmap_lms.iqra.edu.pk.txt
+scanning/lms.iqra.edu.pk_20250818_213409/subdomains/assetfinder.txt
+scanning/lms.iqra.edu.pk_20250818_213409/subdomains/subdomains.txt
+scanning/lms.iqra.edu.pk_20250818_213409/subdomains/subfinder.txt
+wordlists/apis.txt
+wordlists/redirect_payloads.txt
+tools/
