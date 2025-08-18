@@ -31,8 +31,9 @@ class Colors:
     END = '\033[0m'
 
 class ReconX:
-    def __init__(self, target):
+    def __init__(self, target, automated=False):
         self.target = target
+        self.automated = automated
         self.domain = self.extract_domain(target)
         self.scan_dir = f"scanning/{self.domain}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.create_directories()
@@ -276,20 +277,63 @@ class ReconX:
         """Test for XSS vulnerabilities"""
         self.print_info("Starting XSS testing...")
         
-        # Get user input for URL if needed
+        # Get URLs from various sources
+        urls_to_test = []
+        
+        # Try to get URLs from parameter discovery
         params_file = f"{self.scan_dir}/parameters/params.txt"
+        if os.path.exists(params_file):
+            with open(params_file, 'r') as f:
+                urls_to_test.extend([line.strip() for line in f.readlines() if line.strip()])
         
-        # Dalfox
-        if self.check_tool_installed('dalfox') and os.path.exists(params_file):
+        # Add some common test URLs
+        common_test_urls = [
+            f"https://{self.domain}/search?q=test",
+            f"https://{self.domain}/index.php?search=query",
+            f"https://{self.domain}/?s=test",
+            f"http://{self.domain}/search?q=test",
+            f"http://{self.domain}/index.php?search=query"
+        ]
+        urls_to_test.extend(common_test_urls)
+        
+        # Dalfox testing
+        if self.check_tool_installed('dalfox'):
             dalfox_output = f"{self.scan_dir}/vulnerabilities/xss/dalfox_{self.domain}.txt"
-            self.run_command(f"cat {params_file} | dalfox pipe -o {dalfox_output}")
+            
+            if urls_to_test:
+                # Create a temp file with URLs
+                temp_urls_file = f"/tmp/xss_urls_{self.domain}.txt"
+                with open(temp_urls_file, 'w') as f:
+                    for url in urls_to_test[:10]:  # Limit to first 10 URLs
+                        f.write(f"{url}\n")
+                
+                self.run_command(f"cat {temp_urls_file} | dalfox pipe -o {dalfox_output}")
+                os.remove(temp_urls_file)
+            else:
+                # Test the main domain
+                self.run_command(f"echo 'https://{self.domain}' | dalfox pipe -o {dalfox_output}")
         
-        # XSStrike
+        # XSStrike testing
         if os.path.exists("tools/XSStrike/xsstrike.py"):
-            url = input(f"{Colors.YELLOW}Enter URL with parameter for XSS testing (e.g., https://{self.domain}/index.php?search=query): {Colors.END}")
-            if url:
-                xsstrike_output = f"{self.scan_dir}/vulnerabilities/xss/xsstrike_{self.domain}.txt"
-                self.run_command(f"python3 tools/XSStrike/xsstrike.py -u \"{url}\" > {xsstrike_output}")
+            xsstrike_output = f"{self.scan_dir}/vulnerabilities/xss/xsstrike_{self.domain}.txt"
+            
+            if self.automated:
+                # In automated mode, test common URLs
+                test_url = f"https://{self.domain}/search?q=test"
+                self.print_info(f"Testing XSS with automated URL: {test_url}")
+                stdout, stderr = self.run_interactive_command(
+                    f"python3 tools/XSStrike/xsstrike.py -u \"{test_url}\"",
+                    input_responses=['']  # Empty input for any prompts
+                )
+                with open(xsstrike_output, 'w') as f:
+                    f.write(stdout)
+                    if stderr:
+                        f.write(f"\n--- STDERR ---\n{stderr}")
+            else:
+                # Interactive mode - ask user for URL
+                url = input(f"{Colors.YELLOW}Enter URL with parameter for XSS testing (e.g., https://{self.domain}/index.php?search=query): {Colors.END}")
+                if url:
+                    self.run_command(f"python3 tools/XSStrike/xsstrike.py -u \"{url}\" > {xsstrike_output}")
         
         self.print_success("XSS testing completed")
     
@@ -298,10 +342,28 @@ class ReconX:
         self.print_info("Starting SQL injection testing...")
         
         if self.check_tool_installed('sqlmap'):
-            url = input(f"{Colors.YELLOW}Enter URL with parameter for SQL testing (e.g., https://{self.domain}/index.php?id=1): {Colors.END}")
-            if url:
-                sqlmap_output = f"{self.scan_dir}/vulnerabilities/sql/sqlmap_{self.domain}.txt"
-                self.run_command(f"sqlmap -u \"{url}\" --dbs --batch --random-agent > {sqlmap_output}")
+            sqlmap_output = f"{self.scan_dir}/vulnerabilities/sql/sqlmap_{self.domain}.txt"
+            
+            if self.automated:
+                # In automated mode, test common vulnerable parameters
+                test_urls = [
+                    f"https://{self.domain}/index.php?id=1",
+                    f"https://{self.domain}/product.php?id=1",
+                    f"https://{self.domain}/user.php?id=1",
+                    f"https://{self.domain}/page.php?id=1",
+                    f"http://{self.domain}/index.php?id=1"
+                ]
+                
+                self.print_info("Testing common SQL injection points...")
+                for url in test_urls[:2]:  # Test first 2 URLs to save time
+                    self.print_info(f"Testing SQL injection on: {url}")
+                    temp_output = f"{self.scan_dir}/vulnerabilities/sql/sqlmap_{self.domain}_{hash(url)}.txt"
+                    self.run_command(f"timeout 60 sqlmap -u \"{url}\" --dbs --batch --random-agent --timeout=10 > {temp_output}")
+            else:
+                # Interactive mode - ask user for URL
+                url = input(f"{Colors.YELLOW}Enter URL with parameter for SQL testing (e.g., https://{self.domain}/index.php?id=1): {Colors.END}")
+                if url:
+                    self.run_command(f"sqlmap -u \"{url}\" --dbs --batch --random-agent > {sqlmap_output}")
         
         self.print_success("SQL injection testing completed")
     
@@ -326,17 +388,53 @@ class ReconX:
         
         # LFISuite
         if os.path.exists("tools/LFISuite/lfisuite.py"):
-            url = input(f"{Colors.YELLOW}Enter URL for LFI testing (e.g., https://{self.domain}/index.php?file=test): {Colors.END}")
-            if url:
-                lfi_output = f"{self.scan_dir}/vulnerabilities/lfi/lfisuite_{self.domain}.txt"
-                self.run_command(f"python3 tools/LFISuite/lfisuite.py -u \"{url}\" > {lfi_output}")
+            lfi_output = f"{self.scan_dir}/vulnerabilities/lfi/lfisuite_{self.domain}.txt"
+            
+            if self.automated:
+                # Test common LFI parameters in automated mode
+                test_urls = [
+                    f"https://{self.domain}/index.php?file=test",
+                    f"https://{self.domain}/page.php?page=home", 
+                    f"https://{self.domain}/include.php?include=test",
+                    f"http://{self.domain}/index.php?file=test"
+                ]
+                
+                self.print_info("Testing common LFI parameters...")
+                for url in test_urls[:2]:  # Test first 2 URLs
+                    self.print_info(f"Testing LFI on: {url}")
+                    temp_output = f"{self.scan_dir}/vulnerabilities/lfi/lfisuite_{hash(url)}.txt"
+                    stdout, stderr = self.run_interactive_command(
+                        f"timeout 60 python3 tools/LFISuite/lfisuite.py -u \"{url}\"",
+                        input_responses=['1', 'n']  # Select option and no to interactive questions
+                    )
+                    with open(temp_output, 'w') as f:
+                        f.write(stdout)
+                        if stderr:
+                            f.write(f"\n--- STDERR ---\n{stderr}")
+            else:
+                # Interactive mode
+                url = input(f"{Colors.YELLOW}Enter URL for LFI testing (e.g., https://{self.domain}/index.php?file=test): {Colors.END}")
+                if url:
+                    self.run_command(f"python3 tools/LFISuite/lfisuite.py -u \"{url}\" > {lfi_output}")
         
         # Fimap
         if self.check_tool_installed('fimap'):
-            url = input(f"{Colors.YELLOW}Enter URL for RFI testing: {Colors.END}")
-            if url:
-                fimap_output = f"{self.scan_dir}/vulnerabilities/lfi/fimap_{self.domain}.txt"
-                self.run_command(f"fimap -u \"{url}\" > {fimap_output}")
+            fimap_output = f"{self.scan_dir}/vulnerabilities/lfi/fimap_{self.domain}.txt"
+            
+            if self.automated:
+                # Test common RFI parameters
+                test_urls = [
+                    f"https://{self.domain}/index.php?page=home",
+                    f"https://{self.domain}/include.php?file=test"
+                ]
+                for url in test_urls[:1]:  # Test first URL only
+                    self.print_info(f"Testing RFI on: {url}")
+                    self.run_command(f"timeout 30 fimap -u \"{url}\" > {fimap_output}")
+                    break
+            else:
+                url = input(f"{Colors.YELLOW}Enter URL for RFI testing: {Colors.END}")
+                if url:
+                    self.run_command(f"fimap -u \"{url}\" > {fimap_output}")
         
         self.print_success("LFI/RFI testing completed")
     
@@ -374,11 +472,12 @@ class ReconX:
         """Perform API reconnaissance"""
         self.print_info("Starting API reconnaissance...")
         
-        # Kiterunner
+        # Kiterunner (fix the command syntax)
         if self.check_tool_installed('kr'):
             apis_wordlist = "wordlists/apis.txt"
             api_output = f"{self.scan_dir}/api/kiterunner_{self.domain}.txt"
-            self.run_command(f"kr scan -u https://{self.domain} -w {apis_wordlist} > {api_output}")
+            # Fixed syntax for kiterunner
+            self.run_command(f"kr scan https://{self.domain} -w {apis_wordlist} > {api_output}")
         
         # GAU
         if self.check_tool_installed('gau'):
@@ -656,8 +755,8 @@ def main():
     
     args = parser.parse_args()
     
-    # Create ReconX instance
-    reconx = ReconX(args.target)
+    # Create ReconX instance with automated flag
+    reconx = ReconX(args.target, automated=args.auto)
     
     if args.auto:
         reconx.print_banner()
