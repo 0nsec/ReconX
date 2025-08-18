@@ -521,45 +521,51 @@ class ReconX:
             cms_output = f"{self.scan_dir}/cms/cmseek_{self.domain}.txt"
             cms_json_output = f"{self.scan_dir}/cms/cmseek_{self.domain}.json"
             
-            # Run CMSeeK with automatic 'yes' response for redirects
-            command = f"python3 tools/CMSeeK/cmseek.py -u {self.domain}"
-            
-            # Use interactive command with 'y' response for redirect confirmation
-            stdout, stderr = self.run_interactive_command(command, input_responses=['y'])
-            
-            # Save the text output
-            with open(cms_output, 'w') as f:
-                f.write(stdout)
-                if stderr:
-                    f.write(f"\n\n--- STDERR ---\n{stderr}")
-            
-            # Try to find and copy the JSON result if it exists
-            potential_json_paths = [
-                f"tools/CMSeeK/Result/{self.domain}/cms.json",
-                f"tools/CMSeeK/Result/{self.domain.replace('https://', '').replace('http://', '')}/cms.json",
-                f"tools/CMSeeK/Result/{self.target}/cms.json"
-            ]
-            
-            json_found = False
-            for json_path in potential_json_paths:
-                if os.path.exists(json_path):
-                    self.print_info(f"Found CMSeeK JSON result: {json_path}")
-                    # Copy the JSON file to our scan directory
-                    import shutil
-                    shutil.copy2(json_path, cms_json_output)
-                    json_found = True
-                    break
-            
-            if not json_found:
-                # Parse the text output and create JSON manually
-                self.print_info("Creating JSON from CMSeeK text output...")
-                cms_data = self.parse_cmseek_output(stdout)
-                if cms_data:
-                    with open(cms_json_output, 'w') as f:
-                        json.dump(cms_data, f, indent=2)
-                    self.print_success(f"CMSeeK results saved to {cms_json_output}")
-            else:
-                self.print_success(f"CMSeeK JSON results copied to {cms_json_output}")
+            try:
+                # Run CMSeeK with automatic 'yes' response for redirects
+                command = f"python3 tools/CMSeeK/cmseek.py -u {self.domain}"
+                
+                # Use interactive command with 'y' response for redirect confirmation
+                stdout, stderr = self.run_interactive_command(command, input_responses=['y'])
+                
+                # Save the text output
+                with open(cms_output, 'w') as f:
+                    f.write(stdout)
+                    if stderr:
+                        f.write(f"\n\n--- STDERR ---\n{stderr}")
+                
+                # Try to find and copy the JSON result if it exists
+                potential_json_paths = [
+                    f"tools/CMSeeK/Result/{self.domain}/cms.json",
+                    f"tools/CMSeeK/Result/{self.domain.replace('https://', '').replace('http://', '')}/cms.json",
+                    f"tools/CMSeeK/Result/{self.target}/cms.json"
+                ]
+                
+                json_found = False
+                for json_path in potential_json_paths:
+                    if os.path.exists(json_path):
+                        self.print_info(f"Found CMSeeK JSON result: {json_path}")
+                        # Copy the JSON file to our scan directory
+                        import shutil
+                        shutil.copy2(json_path, cms_json_output)
+                        json_found = True
+                        break
+                
+                if not json_found:
+                    # Parse the text output and create JSON manually
+                    self.print_info("Creating JSON from CMSeeK text output...")
+                    cms_data = self.parse_cmseek_output(stdout)
+                    if cms_data:
+                        with open(cms_json_output, 'w') as f:
+                            json.dump(cms_data, f, indent=2)
+                        self.print_success(f"CMSeeK results saved to {cms_json_output}")
+                else:
+                    self.print_success(f"CMSeeK JSON results copied to {cms_json_output}")
+                    
+            except Exception as e:
+                self.print_error(f"Error during CMS enumeration: {e}")
+                # Fallback to simple command execution
+                self.run_command(f"python3 tools/CMSeeK/cmseek.py -u {self.domain} > {cms_output}")
         
         self.print_success("CMS enumeration completed")
     
