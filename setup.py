@@ -157,16 +157,10 @@ class ReconXSetup:
         else:
             self.print_success("WhatWeb already installed")
         
-        # Wappalyzer CLI
-        self.print_info("Installing Wappalyzer CLI...")
-        if self.run_command("npm --version", check=False):
-            self.run_command("npm install -g wappalyzer")
-            self.print_success("Wappalyzer CLI installed")
-        else:
-            self.print_info("Node.js/npm not found, installing...")
-            if self.run_command("sudo apt install -y nodejs npm"):
-                self.run_command("npm install -g wappalyzer")
-                self.print_success("Wappalyzer CLI installed")
+        # Wappalyzer CLI (Note: Package is deprecated)
+        self.print_warning("Wappalyzer CLI is deprecated - using built-in technology detection instead")
+        self.print_info("Skipping Wappalyzer installation (package deprecated)")
+        # Alternative: Using enhanced custom technology detection in ReconX
         
         # WordPress Scanner (WPScan)
         self.print_info("Installing WPScan...")

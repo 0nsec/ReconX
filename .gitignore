@@ -17,3 +17,10 @@ wordlists/lms.iqra.edu.pk-buckets.txt
 scanning/lms.iqra.edu.pk_20250818_215237/waf/wafw00f_lms.iqra.edu.pk.txt
 scanning/lms.iqra.edu.pk_20250818_220546/cms/cmseek_lms.iqra.edu.pk.txt
 scanning/lms.iqra.edu.pk_20250818_220546/cms/cmseek_lms.iqra.edu.pk.json
+demo.py
+QUICKSTART.md
+scanning/examination.iqraisb.edu.pk_20250818_221955/cms/cmseek_examination.iqraisb.edu.pk.json
+scanning/examination.iqraisb.edu.pk_20250818_221955/cms/cmseek_examination.iqraisb.edu.pk.txt
+scanning/examination.iqraisb.edu.pk_20250818_221955/cms/whatweb_examination.iqraisb.edu.pk.txt
+demo_technology_detection.py
+__pycache__/reconx.cpython-312.pyc

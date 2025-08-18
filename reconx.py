@@ -620,24 +620,249 @@ class ReconX:
                 self.run_whatweb()
     
     def run_wappalyzer(self):
-        """Run Wappalyzer for technology profiling"""
-        self.print_info("Running Wappalyzer...")
+        """Run alternative technology detection (Wappalyzer is deprecated)"""
+        self.print_info("Running technology detection...")
         
-        if os.path.exists("tools/Wappalyzer/cli.js") or self.check_tool_installed('wappalyzer'):
-            wappalyzer_output = f"{self.scan_dir}/cms/wappalyzer_{self.domain}.json"
+        # Since Wappalyzer CLI is deprecated, use alternative methods
+        self.print_warning("Wappalyzer CLI is deprecated, using alternative detection methods...")
+        
+        # Use built-in technology detection instead
+        tech_output = f"{self.scan_dir}/cms/technology_detection.json"
+        
+        try:
+            # Use our custom fingerprinting which is more reliable
+            self.print_info("Using enhanced custom technology detection...")
             
-            # Try different Wappalyzer installation methods
-            if self.check_tool_installed('wappalyzer'):
-                self.run_command(f"wappalyzer {self.domain} --pretty > {wappalyzer_output}")
-            elif os.path.exists("tools/Wappalyzer/cli.js"):
-                self.run_command(f"node tools/Wappalyzer/cli.js {self.domain} --pretty > {wappalyzer_output}")
-        else:
-            self.print_info("Installing Wappalyzer CLI...")
-            # Install Wappalyzer via npm
-            if self.run_command("npm install -g wappalyzer"):
-                self.run_wappalyzer()
-            else:
-                self.print_warning("Could not install Wappalyzer, skipping...")
+            # Enhanced technology detection using multiple methods
+            tech_data = self.enhanced_technology_detection()
+            
+            with open(tech_output, 'w') as f:
+                json.dump(tech_data, f, indent=2)
+            
+            self.print_success(f"Technology detection completed: {tech_output}")
+            
+        except Exception as e:
+            self.print_error(f"Technology detection failed: {e}")
+    
+    def enhanced_technology_detection(self):
+        """Enhanced technology detection using multiple indicators"""
+        self.print_info("Running enhanced technology detection...")
+        
+        tech_data = {
+            "target": self.domain,
+            "scan_time": datetime.now().isoformat(),
+            "technologies": {},
+            "frameworks": {},
+            "cms_detected": {},
+            "servers": {},
+            "languages": {},
+            "databases": {},
+            "confidence_scores": {}
+        }
+        
+        try:
+            # Analyze main page and common endpoints
+            urls_to_check = [
+                f"https://{self.domain}",
+                f"http://{self.domain}",
+                f"https://{self.domain}/robots.txt",
+                f"https://{self.domain}/sitemap.xml"
+            ]
+            
+            for url in urls_to_check:
+                try:
+                    response = requests.get(url, timeout=15, verify=False,
+                                          headers={'User-Agent': 'Mozilla/5.0 (ReconX Technology Scanner)'})
+                    
+                    if response.status_code == 200:
+                        self.analyze_response_for_tech(response, tech_data)
+                        break  # Use first successful response
+                        
+                except requests.exceptions.RequestException:
+                    continue
+            
+            # Calculate confidence scores
+            self.calculate_confidence_scores(tech_data)
+            
+        except Exception as e:
+            tech_data["error"] = str(e)
+        
+        return tech_data
+    
+    def analyze_response_for_tech(self, response, tech_data):
+        """Analyze HTTP response for technology indicators"""
+        
+        # Analyze headers
+        headers = dict(response.headers)
+        tech_data["headers"] = headers
+        
+        # Server detection
+        server_header = headers.get('Server', '').lower()
+        if server_header:
+            if 'apache' in server_header:
+                tech_data["servers"]["Apache"] = {"version": server_header, "confidence": 90}
+            elif 'nginx' in server_header:
+                tech_data["servers"]["Nginx"] = {"version": server_header, "confidence": 90}
+            elif 'iis' in server_header:
+                tech_data["servers"]["IIS"] = {"version": server_header, "confidence": 90}
+            elif 'cloudflare' in server_header:
+                tech_data["servers"]["Cloudflare"] = {"version": server_header, "confidence": 85}
+        
+        # Language detection from headers
+        x_powered_by = headers.get('X-Powered-By', '').lower()
+        if x_powered_by:
+            if 'php' in x_powered_by:
+                tech_data["languages"]["PHP"] = {"version": x_powered_by, "confidence": 95}
+            elif 'asp.net' in x_powered_by:
+                tech_data["languages"]["ASP.NET"] = {"version": x_powered_by, "confidence": 95}
+            elif 'express' in x_powered_by:
+                tech_data["languages"]["Node.js"] = {"framework": "Express", "confidence": 90}
+        
+        # Content analysis
+        content = response.text.lower()
+        
+        # CMS Detection
+        cms_patterns = {
+            'wordpress': {
+                'patterns': ['wp-content', 'wp-includes', '/wp-json/', 'wordpress', 'wp-admin'],
+                'weight': [20, 20, 25, 15, 20]
+            },
+            'joomla': {
+                'patterns': ['joomla', 'com_content', 'mod_', '/administrator/', 'joomla.xml'],
+                'weight': [25, 20, 15, 20, 20]
+            },
+            'drupal': {
+                'patterns': ['drupal', 'sites/default', '/misc/', '/modules/', 'drupal.settings'],
+                'weight': [25, 20, 15, 20, 20]
+            },
+            'magento': {
+                'patterns': ['magento', 'mage/', 'skin/frontend', '/js/varien/', 'checkout/cart'],
+                'weight': [30, 15, 15, 20, 20]
+            },
+            'prestashop': {
+                'patterns': ['prestashop', '/themes/', '/modules/', 'prestashop.com', 'prestashop'],
+                'weight': [25, 15, 15, 25, 20]
+            },
+            'shopify': {
+                'patterns': ['shopify', 'shopifycdn', 'myshopify.com', 'shopify-analytics', 'shopify.js'],
+                'weight': [30, 25, 20, 15, 10]
+            },
+            'moodle': {
+                'patterns': ['moodle', 'course/view.php', 'login/index.php', 'mod/', 'moodledata'],
+                'weight': [25, 20, 20, 15, 20]
+            }
+        }
+        
+        for cms, data in cms_patterns.items():
+            score = 0
+            found_patterns = []
+            for i, pattern in enumerate(data['patterns']):
+                if pattern in content:
+                    score += data['weight'][i]
+                    found_patterns.append(pattern)
+            
+            if score > 0:
+                tech_data["cms_detected"][cms] = {
+                    "confidence": min(score, 100),
+                    "patterns_found": found_patterns,
+                    "score": score
+                }
+        
+        # JavaScript Framework Detection
+        js_frameworks = {
+            'react': {
+                'patterns': ['react', '_react', 'reactjs', 'react-dom', 'react.js'],
+                'weight': [25, 20, 20, 20, 15]
+            },
+            'angular': {
+                'patterns': ['angular', 'ng-', 'angularjs', 'angular.js', '@angular'],
+                'weight': [25, 20, 20, 20, 15]
+            },
+            'vue': {
+                'patterns': ['vue.js', 'vue-', 'vuejs', '__vue__', 'vue/dist'],
+                'weight': [30, 20, 20, 15, 15]
+            },
+            'jquery': {
+                'patterns': ['jquery', '$(', 'jquery.min.js', 'jquery-', 'jquery.js'],
+                'weight': [20, 25, 25, 15, 15]
+            },
+            'bootstrap': {
+                'patterns': ['bootstrap', 'bootstrap.min.css', 'bs-', 'bootstrap.js', 'bootstrap/'],
+                'weight': [20, 30, 15, 20, 15]
+            }
+        }
+        
+        for framework, data in js_frameworks.items():
+            score = 0
+            found_patterns = []
+            for i, pattern in enumerate(data['patterns']):
+                if pattern in content:
+                    score += data['weight'][i]
+                    found_patterns.append(pattern)
+            
+            if score > 0:
+                tech_data["frameworks"][framework] = {
+                    "confidence": min(score, 100),
+                    "patterns_found": found_patterns,
+                    "type": "javascript"
+                }
+        
+        # Database detection (from error messages or indicators)
+        db_patterns = {
+            'mysql': ['mysql', 'mysqli', 'mysql error', 'mysql_connect'],
+            'postgresql': ['postgresql', 'postgres', 'pg_connect', 'psql'],
+            'mongodb': ['mongodb', 'mongo', 'mongoose', 'mongodb://'],
+            'sqlite': ['sqlite', 'sqlite3', 'sqlite_', '.sqlite'],
+            'mssql': ['mssql', 'microsoft sql server', 'sqlserver', 'mssqlserver']
+        }
+        
+        for db, patterns in db_patterns.items():
+            found = sum(1 for pattern in patterns if pattern in content)
+            if found > 0:
+                tech_data["databases"][db] = {
+                    "confidence": min(found * 30, 100),
+                    "indicators": found
+                }
+    
+    def calculate_confidence_scores(self, tech_data):
+        """Calculate overall confidence scores for detected technologies"""
+        
+        # Combine scores from different detection methods
+        all_technologies = {}
+        
+        # Add CMS detections
+        for cms, data in tech_data.get("cms_detected", {}).items():
+            all_technologies[cms] = {
+                "type": "CMS",
+                "confidence": data["confidence"],
+                "category": "Content Management System"
+            }
+        
+        # Add framework detections  
+        for framework, data in tech_data.get("frameworks", {}).items():
+            all_technologies[framework] = {
+                "type": "Framework", 
+                "confidence": data["confidence"],
+                "category": "JavaScript Framework"
+            }
+        
+        # Add server detections
+        for server, data in tech_data.get("servers", {}).items():
+            all_technologies[server] = {
+                "type": "Server",
+                "confidence": data["confidence"], 
+                "category": "Web Server"
+            }
+        
+        # Add language detections
+        for lang, data in tech_data.get("languages", {}).items():
+            all_technologies[lang] = {
+                "type": "Language",
+                "confidence": data["confidence"],
+                "category": "Programming Language"
+            }
+        
+        tech_data["confidence_scores"] = all_technologies
     
     def run_wordpress_scans(self):
         """Run WordPress-specific scans"""
