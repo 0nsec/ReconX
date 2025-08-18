@@ -134,6 +134,58 @@ class ReconXSetup:
         if self.run_command(f"git clone https://github.com/arthaud/git-dumper {self.tools_dir}/git-dumper"):
             self.run_command(f"pip3 install -r {self.tools_dir}/git-dumper/requirements.txt")
             self.print_success("git-dumper installed")
+        
+        # Additional CMS Tools
+        self.install_cms_tools()
+    
+    def install_cms_tools(self):
+        """Install additional CMS scanning tools"""
+        self.print_info("Installing additional CMS tools...")
+        
+        # JoomScan for Joomla
+        self.print_info("Installing JoomScan...")
+        if self.run_command(f"git clone https://github.com/OWASP/joomscan.git {self.tools_dir}/joomscan"):
+            self.print_success("JoomScan installed")
+        
+        # WhatWeb (if not already installed)
+        self.print_info("Installing WhatWeb...")
+        if not self.run_command("which whatweb", check=False):
+            if self.run_command("sudo apt install -y whatweb"):
+                self.print_success("WhatWeb installed")
+            elif self.run_command(f"git clone https://github.com/urbanadventurer/WhatWeb.git {self.tools_dir}/WhatWeb"):
+                self.print_success("WhatWeb (source) installed")
+        else:
+            self.print_success("WhatWeb already installed")
+        
+        # Wappalyzer CLI
+        self.print_info("Installing Wappalyzer CLI...")
+        if self.run_command("npm --version", check=False):
+            self.run_command("npm install -g wappalyzer")
+            self.print_success("Wappalyzer CLI installed")
+        else:
+            self.print_info("Node.js/npm not found, installing...")
+            if self.run_command("sudo apt install -y nodejs npm"):
+                self.run_command("npm install -g wappalyzer")
+                self.print_success("Wappalyzer CLI installed")
+        
+        # WordPress Scanner (WPScan)
+        self.print_info("Installing WPScan...")
+        if not self.run_command("which wpscan", check=False):
+            # Install Ruby first if not available
+            self.run_command("sudo apt install -y ruby ruby-dev")
+            if self.run_command("sudo gem install wpscan"):
+                self.print_success("WPScan installed")
+            else:
+                self.print_warning("WPScan installation failed")
+        else:
+            self.print_success("WPScan already installed")
+        
+        # Droopescan for Drupal
+        self.print_info("Installing Droopescan...")
+        if self.run_command("pip3 install droopescan"):
+            self.print_success("Droopescan installed")
+        else:
+            self.print_warning("Droopescan installation failed")
     
     def install_go_tools(self):
         """Install Go-based tools"""

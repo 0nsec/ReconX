@@ -63,6 +63,9 @@ class ReconX:
             f"{self.scan_dir}/urls",
             f"{self.scan_dir}/s3buckets",
             f"{self.scan_dir}/cms",
+            f"{self.scan_dir}/cms/wordpress",
+            f"{self.scan_dir}/cms/joomla",
+            f"{self.scan_dir}/cms/drupal",
             f"{self.scan_dir}/waf",
             f"{self.scan_dir}/git"
         ]
@@ -510,8 +513,38 @@ class ReconX:
         self.print_success("S3 bucket enumeration completed")
     
     def cms_enumeration(self):
-        """Enumerate CMS information"""
-        self.print_info("Starting CMS enumeration...")
+        """Enumerate CMS information using multiple tools"""
+        self.print_info("Starting comprehensive CMS enumeration...")
+        
+        # CMSeeK - Advanced CMS detection
+        self.run_cmseek()
+        
+        # WhatWeb - Web technology identifier
+        self.run_whatweb()
+        
+        # Wappalyzer - Technology profiling
+        self.run_wappalyzer()
+        
+        # WordPress specific scanning
+        self.run_wordpress_scans()
+        
+        # Joomla specific scanning  
+        self.run_joomla_scans()
+        
+        # Drupal specific scanning
+        self.run_drupal_scans()
+        
+        # Custom CMS fingerprinting
+        self.run_custom_cms_fingerprinting()
+        
+        # Generate consolidated CMS report
+        self.generate_cms_report()
+        
+        self.print_success("CMS enumeration completed")
+    
+    def run_cmseek(self):
+        """Run CMSeeK for advanced CMS detection"""
+        self.print_info("Running CMSeeK...")
         
         if os.path.exists("tools/CMSeeK/cmseek.py"):
             # Create CMSeeK Result directory if it doesn't exist
@@ -563,11 +596,383 @@ class ReconX:
                     self.print_success(f"CMSeeK JSON results copied to {cms_json_output}")
                     
             except Exception as e:
-                self.print_error(f"Error during CMS enumeration: {e}")
+                self.print_error(f"Error during CMSeeK scan: {e}")
                 # Fallback to simple command execution
                 self.run_command(f"python3 tools/CMSeeK/cmseek.py -u {self.domain} > {cms_output}")
+        else:
+            self.print_warning("CMSeeK not found, skipping...")
+    
+    def run_whatweb(self):
+        """Run WhatWeb for web technology identification"""
+        self.print_info("Running WhatWeb...")
         
-        self.print_success("CMS enumeration completed")
+        if self.check_tool_installed('whatweb'):
+            whatweb_output = f"{self.scan_dir}/cms/whatweb_{self.domain}.txt"
+            whatweb_json = f"{self.scan_dir}/cms/whatweb_{self.domain}.json"
+            
+            # Run WhatWeb with different verbosity levels
+            self.run_command(f"whatweb -v -a 3 --color=never {self.domain} > {whatweb_output}")
+            self.run_command(f"whatweb --log-json {whatweb_json} -a 3 {self.domain}")
+        else:
+            self.print_warning("WhatWeb not installed, attempting to install...")
+            # Try to install WhatWeb
+            if self.run_command("sudo apt install -y whatweb"):
+                self.run_whatweb()
+    
+    def run_wappalyzer(self):
+        """Run Wappalyzer for technology profiling"""
+        self.print_info("Running Wappalyzer...")
+        
+        if os.path.exists("tools/Wappalyzer/cli.js") or self.check_tool_installed('wappalyzer'):
+            wappalyzer_output = f"{self.scan_dir}/cms/wappalyzer_{self.domain}.json"
+            
+            # Try different Wappalyzer installation methods
+            if self.check_tool_installed('wappalyzer'):
+                self.run_command(f"wappalyzer {self.domain} --pretty > {wappalyzer_output}")
+            elif os.path.exists("tools/Wappalyzer/cli.js"):
+                self.run_command(f"node tools/Wappalyzer/cli.js {self.domain} --pretty > {wappalyzer_output}")
+        else:
+            self.print_info("Installing Wappalyzer CLI...")
+            # Install Wappalyzer via npm
+            if self.run_command("npm install -g wappalyzer"):
+                self.run_wappalyzer()
+            else:
+                self.print_warning("Could not install Wappalyzer, skipping...")
+    
+    def run_wordpress_scans(self):
+        """Run WordPress-specific scans"""
+        self.print_info("Running WordPress-specific scans...")
+        
+        # WPScan
+        if self.check_tool_installed('wpscan'):
+            wp_output = f"{self.scan_dir}/cms/wordpress/wpscan_{self.domain}.txt"
+            Path(f"{self.scan_dir}/cms/wordpress").mkdir(parents=True, exist_ok=True)
+            
+            # Basic WordPress scan
+            self.run_command(f"wpscan --url https://{self.domain} --random-user-agent --detection-mode aggressive > {wp_output}")
+            
+            # WordPress vulnerability scan
+            wp_vuln_output = f"{self.scan_dir}/cms/wordpress/wpscan_vulns_{self.domain}.txt"
+            self.run_command(f"wpscan --url https://{self.domain} --enumerate vp,vt,cb,dbe --random-user-agent > {wp_vuln_output}")
+        else:
+            self.print_info("Installing WPScan...")
+            if self.run_command("sudo gem install wpscan"):
+                self.run_wordpress_scans()
+            else:
+                self.print_warning("Could not install WPScan, skipping WordPress scans...")
+        
+        # WordPress version detection via manual methods
+        self.wordpress_manual_detection()
+    
+    def run_joomla_scans(self):
+        """Run Joomla-specific scans"""
+        self.print_info("Running Joomla-specific scans...")
+        
+        Path(f"{self.scan_dir}/cms/joomla").mkdir(parents=True, exist_ok=True)
+        
+        # JoomScan
+        if os.path.exists("tools/joomscan/joomscan.pl"):
+            joomla_output = f"{self.scan_dir}/cms/joomla/joomscan_{self.domain}.txt"
+            self.run_command(f"perl tools/joomscan/joomscan.pl -u https://{self.domain} > {joomla_output}")
+        else:
+            self.print_info("Installing JoomScan...")
+            if self.run_command("git clone https://github.com/OWASP/joomscan.git tools/joomscan"):
+                self.run_joomla_scans()
+        
+        # Manual Joomla detection
+        self.joomla_manual_detection()
+    
+    def run_drupal_scans(self):
+        """Run Drupal-specific scans"""
+        self.print_info("Running Drupal-specific scans...")
+        
+        Path(f"{self.scan_dir}/cms/drupal").mkdir(parents=True, exist_ok=True)
+        
+        # Droopescan
+        if self.check_tool_installed('droopescan'):
+            drupal_output = f"{self.scan_dir}/cms/drupal/droopescan_{self.domain}.txt"
+            self.run_command(f"droopescan scan drupal -u https://{self.domain} > {drupal_output}")
+        else:
+            self.print_info("Installing Droopescan...")
+            if self.run_command("pip3 install droopescan"):
+                self.run_drupal_scans()
+        
+        # Manual Drupal detection
+        self.drupal_manual_detection()
+    
+    def wordpress_manual_detection(self):
+        """Manual WordPress detection methods"""
+        self.print_info("Performing manual WordPress detection...")
+        
+        wp_detection = f"{self.scan_dir}/cms/wordpress/manual_detection.txt"
+        
+        detection_urls = [
+            f"https://{self.domain}/wp-admin/",
+            f"https://{self.domain}/wp-login.php",
+            f"https://{self.domain}/wp-content/",
+            f"https://{self.domain}/wp-includes/",
+            f"https://{self.domain}/xmlrpc.php",
+            f"https://{self.domain}/wp-json/wp/v2/users",
+            f"https://{self.domain}/readme.html",
+            f"https://{self.domain}/license.txt"
+        ]
+        
+        results = []
+        for url in detection_urls:
+            try:
+                response = requests.get(url, timeout=10, verify=False)
+                results.append(f"{url} - Status: {response.status_code}")
+                if response.status_code == 200:
+                    results.append(f"  Content-Length: {len(response.content)}")
+                    if 'wp-' in response.text.lower() or 'wordpress' in response.text.lower():
+                        results.append(f"  WordPress indicators found!")
+            except:
+                results.append(f"{url} - Connection failed")
+        
+        with open(wp_detection, 'w') as f:
+            f.write("WordPress Manual Detection Results\n")
+            f.write("=" * 40 + "\n")
+            f.write("\n".join(results))
+    
+    def joomla_manual_detection(self):
+        """Manual Joomla detection methods"""
+        self.print_info("Performing manual Joomla detection...")
+        
+        joomla_detection = f"{self.scan_dir}/cms/joomla/manual_detection.txt"
+        
+        detection_urls = [
+            f"https://{self.domain}/administrator/",
+            f"https://{self.domain}/administrator/index.php",
+            f"https://{self.domain}/components/",
+            f"https://{self.domain}/modules/",
+            f"https://{self.domain}/templates/",
+            f"https://{self.domain}/cache/",
+            f"https://{self.domain}/language/en-GB/en-GB.xml",
+            f"https://{self.domain}/joomla.xml",
+            f"https://{self.domain}/htaccess.txt"
+        ]
+        
+        results = []
+        for url in detection_urls:
+            try:
+                response = requests.get(url, timeout=10, verify=False)
+                results.append(f"{url} - Status: {response.status_code}")
+                if response.status_code == 200:
+                    if 'joomla' in response.text.lower():
+                        results.append(f"  Joomla indicators found!")
+            except:
+                results.append(f"{url} - Connection failed")
+        
+        with open(joomla_detection, 'w') as f:
+            f.write("Joomla Manual Detection Results\n")
+            f.write("=" * 40 + "\n")
+            f.write("\n".join(results))
+    
+    def drupal_manual_detection(self):
+        """Manual Drupal detection methods"""
+        self.print_info("Performing manual Drupal detection...")
+        
+        drupal_detection = f"{self.scan_dir}/cms/drupal/manual_detection.txt"
+        
+        detection_urls = [
+            f"https://{self.domain}/user/login",
+            f"https://{self.domain}/admin/",
+            f"https://{self.domain}/sites/default/",
+            f"https://{self.domain}/misc/",
+            f"https://{self.domain}/modules/",
+            f"https://{self.domain}/themes/",
+            f"https://{self.domain}/includes/",
+            f"https://{self.domain}/CHANGELOG.txt",
+            f"https://{self.domain}/COPYRIGHT.txt",
+            f"https://{self.domain}/INSTALL.txt"
+        ]
+        
+        results = []
+        for url in detection_urls:
+            try:
+                response = requests.get(url, timeout=10, verify=False)
+                results.append(f"{url} - Status: {response.status_code}")
+                if response.status_code == 200:
+                    if 'drupal' in response.text.lower():
+                        results.append(f"  Drupal indicators found!")
+            except:
+                results.append(f"{url} - Connection failed")
+        
+        with open(drupal_detection, 'w') as f:
+            f.write("Drupal Manual Detection Results\n")
+            f.write("=" * 40 + "\n")
+            f.write("\n".join(results))
+    
+    def run_custom_cms_fingerprinting(self):
+        """Run custom CMS fingerprinting techniques"""
+        self.print_info("Running custom CMS fingerprinting...")
+        
+        fingerprint_results = f"{self.scan_dir}/cms/custom_fingerprinting.json"
+        
+        fingerprints = {
+            "target": self.domain,
+            "scan_time": datetime.now().isoformat(),
+            "technologies": {},
+            "indicators": {},
+            "headers": {},
+            "meta_tags": {},
+            "cookies": {}
+        }
+        
+        try:
+            # Analyze main page
+            response = requests.get(f"https://{self.domain}", timeout=15, verify=False, 
+                                  headers={'User-Agent': 'Mozilla/5.0 (compatible; ReconX)'})
+            
+            # Extract headers
+            fingerprints["headers"] = dict(response.headers)
+            
+            # Extract cookies
+            fingerprints["cookies"] = {cookie.name: cookie.value for cookie in response.cookies}
+            
+            # Parse HTML for indicators
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Meta tags analysis
+            meta_tags = soup.find_all('meta')
+            fingerprints["meta_tags"] = {
+                tag.get('name', tag.get('property', 'unknown')): tag.get('content', '') 
+                for tag in meta_tags if tag.get('content')
+            }
+            
+            # Technology indicators in HTML
+            html_content = response.text.lower()
+            
+            cms_indicators = {
+                'wordpress': ['wp-content', 'wp-includes', 'wp-admin', '/wp-json/', 'wordpress'],
+                'joomla': ['joomla', 'com_content', 'mod_', 'plg_', '/administrator/'],
+                'drupal': ['drupal', 'sites/default', '/misc/', '/modules/', 'drupal.settings'],
+                'magento': ['magento', 'mage/', 'skin/frontend', 'varien/', 'prototype.js'],
+                'prestashop': ['prestashop', '/themes/', '/modules/', 'prestashop.com'],
+                'opencart': ['opencart', 'catalog/', 'system/', 'vqmod/'],
+                'typo3': ['typo3', 'typo3conf/', 'fileadmin/', 'typo3temp/'],
+                'concrete5': ['concrete5', 'concrete/', 'ccm_', 'c5_'],
+                'umbraco': ['umbraco', '/umbraco/', 'umbraco.clientdependency'],
+                'sharepoint': ['sharepoint', '_layouts/', 'webresource.axd', 'scriptresource.axd'],
+                'moodle': ['moodle', 'course/view.php', 'login/index.php', 'mod/'],
+                'mediawiki': ['mediawiki', 'index.php?title=', 'special:search', 'wiki/'],
+                'phpbb': ['phpbb', 'phpbb/', 'viewforum.php', 'viewtopic.php'],
+                'vbulletin': ['vbulletin', 'forumdisplay.php', 'showthread.php', 'clientscript/']
+            }
+            
+            for cms, indicators in cms_indicators.items():
+                score = sum(1 for indicator in indicators if indicator in html_content)
+                if score > 0:
+                    fingerprints["technologies"][cms] = {
+                        "confidence": min(score * 20, 100),
+                        "indicators_found": score,
+                        "total_indicators": len(indicators)
+                    }
+            
+            # JavaScript framework detection
+            js_frameworks = {
+                'jquery': ['jquery', '$(', 'jQuery'],
+                'react': ['react', 'reactjs', '_react'],
+                'angular': ['angular', 'ng-', 'angularjs'],
+                'vue': ['vue.js', 'vue-', 'vuejs'],
+                'bootstrap': ['bootstrap', 'bs-', 'bootstrap.'],
+                'foundation': ['foundation', 'zurb'],
+                'backbone': ['backbone', 'backbone.js'],
+                'ember': ['ember', 'emberjs']
+            }
+            
+            for framework, indicators in js_frameworks.items():
+                score = sum(1 for indicator in indicators if indicator in html_content)
+                if score > 0:
+                    fingerprints["technologies"][f"js_{framework}"] = {
+                        "confidence": min(score * 25, 100),
+                        "type": "javascript_framework"
+                    }
+            
+        except Exception as e:
+            self.print_error(f"Error in custom fingerprinting: {e}")
+            fingerprints["error"] = str(e)
+        
+        # Save results
+        with open(fingerprint_results, 'w') as f:
+            json.dump(fingerprints, f, indent=2)
+        
+        self.print_success(f"Custom fingerprinting completed: {fingerprint_results}")
+    
+    def generate_cms_report(self):
+        """Generate a consolidated CMS report"""
+        self.print_info("Generating consolidated CMS report...")
+        
+        report_file = f"{self.scan_dir}/cms/cms_consolidated_report.html"
+        
+        html_report = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>CMS Enumeration Report - {self.domain}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }}
+                .header {{ background-color: #2c3e50; color: white; padding: 20px; border-radius: 5px; }}
+                .section {{ background-color: white; margin: 20px 0; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+                .high {{ background-color: #e74c3c; color: white; padding: 10px; border-radius: 3px; margin: 5px 0; }}
+                .medium {{ background-color: #f39c12; color: white; padding: 10px; border-radius: 3px; margin: 5px 0; }}
+                .low {{ background-color: #27ae60; color: white; padding: 10px; border-radius: 3px; margin: 5px 0; }}
+                .info {{ background-color: #3498db; color: white; padding: 10px; border-radius: 3px; margin: 5px 0; }}
+                table {{ width: 100%; border-collapse: collapse; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                th {{ background-color: #f2f2f2; }}
+                pre {{ background-color: #f8f9fa; padding: 15px; border-radius: 3px; overflow-x: auto; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>CMS Enumeration Report</h1>
+                <p><strong>Target:</strong> {self.domain}</p>
+                <p><strong>Scan Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+        """
+        
+        # Add sections for each scan result
+        cms_files = [
+            ('CMSeeK Results', f'{self.scan_dir}/cms/cmseek_{self.domain}.txt'),
+            ('WhatWeb Results', f'{self.scan_dir}/cms/whatweb_{self.domain}.txt'),
+            ('WordPress Scan', f'{self.scan_dir}/cms/wordpress/wpscan_{self.domain}.txt'),
+            ('Joomla Scan', f'{self.scan_dir}/cms/joomla/joomscan_{self.domain}.txt'),
+            ('Drupal Scan', f'{self.scan_dir}/cms/drupal/droopescan_{self.domain}.txt'),
+            ('Custom Fingerprinting', f'{self.scan_dir}/cms/custom_fingerprinting.json')
+        ]
+        
+        for section_name, file_path in cms_files:
+            html_report += f'<div class="section"><h2>{section_name}</h2>'
+            
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r') as f:
+                        content = f.read()
+                        if file_path.endswith('.json'):
+                            # Pretty print JSON
+                            try:
+                                import json as json_mod
+                                parsed = json_mod.loads(content)
+                                content = json_mod.dumps(parsed, indent=2)
+                            except:
+                                pass
+                        
+                        html_report += f'<pre>{content[:2000]}{"..." if len(content) > 2000 else ""}</pre>'
+                except:
+                    html_report += '<p>Could not read file content</p>'
+            else:
+                html_report += '<p>No results found for this scan</p>'
+            
+            html_report += '</div>'
+        
+        html_report += '</body></html>'
+        
+        with open(report_file, 'w') as f:
+            f.write(html_report)
+        
+        self.print_success(f"Consolidated CMS report generated: {report_file}")
     
     def parse_cmseek_output(self, output):
         """Parse CMSeeK text output and extract CMS information"""
