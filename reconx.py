@@ -164,6 +164,27 @@ class ReconX:
             self.print_error(f"Error running interactive command: {e}")
             return "", str(e)
     
+    def check_target_accessibility(self):
+        """Check if target is accessible before running tests"""
+        try:
+            import requests
+            test_urls = [
+                f"https://{self.domain}",
+                f"http://{self.domain}"
+            ]
+            
+            for url in test_urls:
+                try:
+                    response = requests.get(url, timeout=10, verify=False)
+                    if response.status_code < 500:  # Any response except server errors
+                        return True
+                except requests.exceptions.RequestException:
+                    continue
+            
+            return False
+        except Exception:
+            return True  # If we can't check, assume it's accessible
+    
     def check_tool_installed(self, tool):
         """Check if a tool is installed"""
         return subprocess.run(f"which {tool}", shell=True, capture_output=True).returncode == 0
@@ -295,8 +316,17 @@ class ReconX:
         self.print_success("Parameter discovery completed")
     
     def xss_testing(self):
-        """Test for XSS vulnerabilities"""
+        """Test for XSS vulnerabilities with improved error handling"""
         self.print_info("Starting XSS testing...")
+        
+        # Create XSS results directory
+        Path(f"{self.scan_dir}/vulnerabilities/xss").mkdir(parents=True, exist_ok=True)
+        
+        # First check if target is accessible
+        target_accessible = self.check_target_accessibility()
+        
+        if not target_accessible:
+            self.print_warning("Target appears to be inaccessible. XSS testing may produce limited results.")
         
         # Get URLs from various sources
         urls_to_test = []
@@ -309,14 +339,16 @@ class ReconX:
         
         # Add some common test URLs
         common_test_urls = [
+            f"https://{self.domain}",
             f"https://{self.domain}/search?q=test",
             f"https://{self.domain}/index.php?search=query",
             f"https://{self.domain}/?s=test",
+            f"http://{self.domain}",
             f"http://{self.domain}/search?q=test",
             f"http://{self.domain}/index.php?search=query"
         ]
         urls_to_test.extend(common_test_urls)
-        
+
         # Dalfox testing
         if self.check_tool_installed('dalfox'):
             dalfox_output = f"{self.scan_dir}/vulnerabilities/xss/dalfox_{self.domain}.txt"
@@ -328,33 +360,104 @@ class ReconX:
                     for url in urls_to_test[:10]:  # Limit to first 10 URLs
                         f.write(f"{url}\n")
                 
-                self.run_command(f"cat {temp_urls_file} | dalfox pipe -o {dalfox_output}")
-                os.remove(temp_urls_file)
+                self.print_info("Running Dalfox XSS scanner...")
+                result = self.run_command(f"timeout 120 cat {temp_urls_file} | dalfox pipe -o {dalfox_output}")
+                if os.path.exists(temp_urls_file):
+                    os.remove(temp_urls_file)
+                    
+                if not result:
+                    self.print_warning("Dalfox may have encountered issues or timed out")
             else:
                 # Test the main domain
-                self.run_command(f"echo 'https://{self.domain}' | dalfox pipe -o {dalfox_output}")
-        
-        # XSStrike testing
+                self.run_command(f"echo 'https://{self.domain}' | timeout 120 dalfox pipe -o {dalfox_output}")
+        else:
+            self.print_warning("Dalfox not installed. Skipping Dalfox XSS testing...")
+
+        # XSStrike testing with improved error handling
         if os.path.exists("tools/XSStrike/xsstrike.py"):
             xsstrike_output = f"{self.scan_dir}/vulnerabilities/xss/xsstrike_{self.domain}.txt"
             
             if self.automated:
-                # In automated mode, test common URLs
-                test_url = f"https://{self.domain}/search?q=test"
-                self.print_info(f"Testing XSS with automated URL: {test_url}")
-                stdout, stderr = self.run_interactive_command(
-                    f"python3 tools/XSStrike/xsstrike.py -u \"{test_url}\"",
-                    input_responses=['']  # Empty input for any prompts
-                )
+                # In automated mode, test common URLs with better error handling
+                test_urls = [
+                    f"https://{self.domain}",
+                    f"https://{self.domain}/search?q=test",
+                    f"http://{self.domain}"
+                ]
+                
+                self.print_info("Testing XSS with XSStrike (automated mode)")
+                
+                # Try multiple URLs and handle errors gracefully
+                xsstrike_results = []
+                for test_url in test_urls:
+                    try:
+                        self.print_info(f"Testing XSS on: {test_url}")
+                        
+                        # First check if target is reachable
+                        import requests
+                        try:
+                            response = requests.get(test_url, timeout=10, verify=False)
+                            if response.status_code in [404, 500, 502, 503]:
+                                self.print_warning(f"Target {test_url} returned {response.status_code}, skipping XSStrike test")
+                                continue
+                        except:
+                            self.print_warning(f"Cannot reach {test_url}, skipping XSStrike test")
+                            continue
+                        
+                        # Add timeout and better error handling
+                        stdout, stderr = self.run_interactive_command(
+                            f"timeout 60 python3 tools/XSStrike/xsstrike.py -u \"{test_url}\" --skip-dom",
+                            input_responses=['']  # Empty input for any prompts
+                        )
+                        
+                        if stdout and "XSStrike" in stdout:
+                            xsstrike_results.append(f"=== Results for {test_url} ===\n{stdout}\n")
+                            
+                        if stderr and "Traceback" not in stderr:
+                            xsstrike_results.append(f"=== Errors for {test_url} ===\n{stderr}\n")
+                        elif stderr and "ValueError: invalid literal for int()" in stderr:
+                            xsstrike_results.append(f"=== XSStrike connection error for {test_url} ===\nTarget appears to be unreachable or returns invalid response codes.\n")
+                            
+                        # Break on first successful connection
+                        if "Unable to connect" not in stdout and stdout:
+                            break
+                            
+                    except Exception as e:
+                        xsstrike_results.append(f"=== Error testing {test_url} ===\nException: {str(e)}\n")
+                        continue
+                
+                # Write consolidated results
                 with open(xsstrike_output, 'w') as f:
-                    f.write(stdout)
-                    if stderr:
-                        f.write(f"\n--- STDERR ---\n{stderr}")
+                    if xsstrike_results:
+                        f.write("XSStrike Automated Testing Results\n")
+                        f.write("="*50 + "\n\n")
+                        f.write('\n'.join(xsstrike_results))
+                    else:
+                        f.write("XSStrike testing completed but no results were captured.\n")
+                        f.write("This may indicate connection issues or the target is not accessible.\n")
+                        f.write(f"Target tested: {self.domain}\n")
+                        f.write("Recommendation: Verify target accessibility and try manual testing.\n")
+                        
             else:
                 # Interactive mode - ask user for URL
                 url = input(f"{Colors.YELLOW}Enter URL with parameter for XSS testing (e.g., https://{self.domain}/index.php?search=query): {Colors.END}")
                 if url:
-                    self.run_command(f"python3 tools/XSStrike/xsstrike.py -u \"{url}\" > {xsstrike_output}")
+                    try:
+                        self.print_info(f"Testing XSS on user-provided URL: {url}")
+                        result = self.run_command(f"timeout 60 python3 tools/XSStrike/xsstrike.py -u \"{url}\" --skip-dom > {xsstrike_output}")
+                        if not result:
+                            self.print_warning("XSStrike testing may have encountered issues. Check the output file for details.")
+                    except Exception as e:
+                        self.print_error(f"Error running XSStrike: {e}")
+                        with open(xsstrike_output, 'w') as f:
+                            f.write(f"XSStrike testing failed with error: {str(e)}\n")
+        else:
+            self.print_warning("XSStrike not found. Skipping XSStrike XSS testing...")
+            # Create a placeholder file
+            xsstrike_output = f"{self.scan_dir}/vulnerabilities/xss/xsstrike_{self.domain}.txt"
+            with open(xsstrike_output, 'w') as f:
+                f.write("XSStrike not available - tool not found in tools/XSStrike/\n")
+                f.write("Install XSStrike for comprehensive XSS testing.\n")
         
         self.print_success("XSS testing completed")
     
@@ -1542,7 +1645,32 @@ class ReconX:
         
         self.print_success("Comprehensive reconnaissance scan completed!")
         self.print_info(f"Results saved in: {self.scan_dir}")
+        
+        # Generate HTML report for automated scans
+        if self.automated:
+            self.generate_html_report()
 
+    def generate_html_report(self):
+        """Generate interactive HTML report using external script"""
+        self.print_info("Generating interactive HTML report...")
+        
+        try:
+            # Call external report generator
+            report_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'report_generator.py')
+            if os.path.exists(report_script):
+                cmd = f"python3 {report_script} {self.scan_dir} {self.domain} {self.target}"
+                result = os.system(cmd)
+                
+                if result == 0:
+                    self.print_success("Interactive HTML report generated successfully!")
+                else:
+                    self.print_error("Failed to generate HTML report")
+            else:
+                self.print_error("Report generator script not found")
+                
+        except Exception as e:
+            self.print_error(f"Failed to generate HTML report: {e}")
+    
     # ============================================================================
     # NEW ADVANCED ATTACK METHODS 
     # ============================================================================
