@@ -355,6 +355,12 @@ class ReconXSetup:
     def download_seclists(self):
         """Download SecLists wordlists with user permission"""
         self.print_info("SecLists provides comprehensive wordlists for security testing...")
+        self.print_info("SecLists includes:")
+        self.print_info("- Directory/file brute-force wordlists")
+        self.print_info("- Password and username lists")
+        self.print_info("- Fuzzing payloads for various attacks")
+        self.print_info("- Common vulnerability patterns")
+        self.print_info("- API endpoint wordlists")
         
         while True:
             user_choice = input(f"{Colors.YELLOW}Do you want to download SecLists wordlists? This will take ~200MB of space. (y/n/skip): {Colors.END}").lower().strip()
@@ -364,6 +370,11 @@ class ReconXSetup:
                 if self.run_command("git clone https://github.com/danielmiessler/SecLists.git wordlists/SecLists"):
                     self.print_success("SecLists wordlists downloaded successfully!")
                     self.print_info("SecLists available at: wordlists/SecLists/")
+                    self.print_info("Popular wordlists include:")
+                    self.print_info("- wordlists/SecLists/Discovery/Web-Content/common.txt")
+                    self.print_info("- wordlists/SecLists/Discovery/Web-Content/directory-list-2.3-medium.txt")
+                    self.print_info("- wordlists/SecLists/Passwords/Common-Credentials/")
+                    self.print_info("- wordlists/SecLists/Fuzzing/")
                 else:
                     self.print_error("Failed to download SecLists")
                 break
@@ -397,8 +408,11 @@ Some tools may require manual installation:
      target-backup
 
 {Colors.GREEN}2. Additional Wordlists:{Colors.END}
-   Download SecLists for comprehensive wordlists:
-   git clone https://github.com/danielmiessler/SecLists.git
+   SecLists wordlists (if not downloaded during setup):
+   - Location: wordlists/SecLists/
+   - Manual installation: git clone https://github.com/danielmiessler/SecLists.git wordlists/SecLists
+   - Size: ~200MB of comprehensive security testing wordlists
+   - Includes: Directory brute-force, password lists, fuzzing payloads, etc.
 
 {Colors.GREEN}3. Manual Tool Verification:{Colors.END}
    Verify these tools are working:
