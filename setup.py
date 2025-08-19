@@ -352,22 +352,32 @@ class ReconXSetup:
         
         self.print_success("Comprehensive wordlists created")
     
-    def create_requirements_file(self):
-        """Create requirements.txt file"""
-        requirements = """requests
-        beautifulsoup4
-        urllib3
-        colorama
-        tqdm
-        python-nmap
-        dnspython
-        sublist3r
-        """
+    def download_seclists(self):
+        """Download SecLists wordlists with user permission"""
+        self.print_info("SecLists provides comprehensive wordlists for security testing...")
         
-        with open("requirements.txt", "w") as f:
-            f.write(requirements)
+        while True:
+            user_choice = input(f"{Colors.YELLOW}Do you want to download SecLists wordlists? This will take ~200MB of space. (y/n/skip): {Colors.END}").lower().strip()
+            
+            if user_choice in ['y', 'yes']:
+                self.print_info("Downloading SecLists wordlists...")
+                if self.run_command("git clone https://github.com/danielmiessler/SecLists.git wordlists/SecLists"):
+                    self.print_success("SecLists wordlists downloaded successfully!")
+                    self.print_info("SecLists available at: wordlists/SecLists/")
+                else:
+                    self.print_error("Failed to download SecLists")
+                break
+            elif user_choice in ['n', 'no', 'skip']:
+                self.print_warning("Skipping SecLists download")
+                self.print_info("You can manually install SecLists later with:")
+                self.print_info("git clone https://github.com/danielmiessler/SecLists.git wordlists/SecLists")
+                break
+            else:
+                self.print_warning("Please enter 'y' for yes, 'n' for no, or 'skip' to skip")
         
-        self.print_success("requirements.txt created")
+        return True
+    
+
     
     def print_installation_guide(self):
         """Print installation guide for manual tools"""
@@ -420,7 +430,6 @@ Some tools may require manual installation:
         """)
         
         try:
-            self.create_requirements_file()
             self.check_and_install_go()
             self.install_apt_tools()
             self.install_python_tools()
@@ -431,6 +440,7 @@ Some tools may require manual installation:
             self.install_osint_tools()
             self.create_wordlists()
             self.create_comprehensive_wordlists()
+            self.download_seclists()  # Ask user for SecLists download
             self.setup_gf_patterns()
             
             self.print_success("ReconX comprehensive setup completed successfully!")
