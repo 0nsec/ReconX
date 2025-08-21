@@ -17,6 +17,8 @@
 
 </div>
 
+[![asciicast](https://asciinema.org/a/LU4eCvBcDq3B8gL3jmqD5oMm5.svg)](https://asciinema.org/a/LU4eCvBcDq3B8gL3jmqD5oMm5)
+
 ## Features
 
 ReconX is a comprehensive reconnaissance and vulnerability assessment toolkit designed for bug bounty hunters, penetration testers, and security researchers. It automates the entire security testing workflow with 35+ advanced testing modules.
